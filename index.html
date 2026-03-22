@@ -348,5 +348,17 @@
     
     async function deleteItem(id) { if(confirm("確定刪除此筆資料？")) { toggleLoader(true, "刪除中..."); await fetch(SCRIPT_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'delete', id:id})}); fetchData(); } }
 </script>
+
 </body>
+// 阻止右鍵選單
+document.oncontextmenu = function() { return false; };
+
+// 阻止 F12、Ctrl+Shift+I、Ctrl+Shift+J、Ctrl+U
+document.onkeydown = function(e) {
+    if (e.keyCode == 123 || 
+        (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || 
+        (e.ctrlKey && e.keyCode == 85)) {
+        return false;
+    }
+};
 </html>
