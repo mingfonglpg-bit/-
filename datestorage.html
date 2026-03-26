@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3月庫存自動搜尋系統</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        :root { --primary: #2c3e50; --accent: #3498db; --bg: #f4f7f6; }
+        body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; background: var(--bg); margin: 0; padding: 15px; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .search-box { width: 100%; padding: 12px 15px; font-size: 16px; border: 2px solid #ddd; border-radius: 30px; box-sizing: border-box; outline: none; transition: 0.3s; }
+        .search-box:focus { border-color: var(--accent); }
+        .table-container { overflow-x: auto; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; min-width: 500px; }
+        th { background: var(--primary); color: white; padding: 12px; text-align: left; font-size: 14px; position: sticky; top: 0; }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+        tr:nth-child(even) { background: #fafafa; }
+        .qty-tag { font-weight: bold; color: #e74c3c; background: #fdf2f2; padding: 2px 8px; border-radius: 4px; }
+        .status { font-size: 12px; color: #7f8c8d; }
+        .loading-overlay { text-align: center; padding: 40px; color: #95a5a6; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h3 style="margin:0;">📦 庫存即時查詢</h3>
+        <div id="fileInfo" class="status">正在同步伺服器資料...</div>
+    </div>
+
+    <input type="text" id="searchInput" class="search-box" placeholder="搜尋品項、規格或批號..." oninput="filterData()">
+
+    <div id="loader" class="loading-overlay">⏳ 資料載入中，請稍候...</div>
+
+    <div class="table-container">
+        <table id="resultTable" style="display:none;">
+            <thead>
+                <tr>
+                    <th width="45%">品項規格 (A+B+C)</th>
+                    <th width="15%">總量 (AL)</th>
+                    <th width="20%">批號 (AM)</th>
+                    <th width="20%">日期 (AN)</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // --- 配置：CSV 檔案的路徑 (放在同目錄下) ---
+    const CSV_PATH = 'data.csv'; 
+
+    let allData = [];
+
+    // Excel 日期數值轉換
+    function formatExcelDate(num) {
+        if (!num || isNaN(num) || num < 1000) return num || "-";
+        const date = new Date(Math.round((num - 25569) * 86400 * 1000));
+        return date.toLocaleDateString('zh-TW', {year:'numeric', month:'2-digit', day:'2-digit'});
+    }
+
+    // 從伺服器抓取檔案
+    async function init() {
+        try {
+            const response = await fetch(CSV_PATH);
+            if (!response.ok) throw new Error('找不到 data.csv 檔案');
+            
+            const csvText = await response.text();
+            
+            Papa.parse(csvText, {
+                header: false,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    const rows = results.data;
+                    // 抓取 Row 2-411 (索引 1-410)
+                    for (let i = 1; i < rows.length && i < 411; i++) {
+                        const r = rows[i];
+                        // 依照您的需求：品項(A+B+C), 總量(AL/37), 批號(AM/38), 日期(AN/39)
+                        if (r[0] || r[1] || r[2]) {
+                            allData.push({
+                                name: `${r[0]||''} ${r[1]||''} ${r[2]||''}`.trim(),
+                                qty: r[37] || "0",
+                                batch: r[38] || "-",
+                                date: formatExcelDate(r[39])
+                            });
+                        }
+                    }
+                    document.getElementById('loader').style.display = 'none';
+                    document.getElementById('resultTable').style.display = 'table';
+                    document.getElementById('fileInfo').innerText = `已連線 (共 ${allData.length} 筆)`;
+                    filterData();
+                }
+            });
+        } catch (err) {
+            document.getElementById('loader').innerHTML = `<b style="color:red;">❌ 讀取失敗:</b> ${err.message}<br>請確保 data.csv 與本網頁放在同一目錄。`;
+        }
+    }
+
+    function filterData() {
+        const keyword = document.getElementById('searchInput').value.toLowerCase();
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+
+        const matched = allData.filter(item => 
+            item.name.toLowerCase().includes(keyword) || 
+            item.batch.toLowerCase().includes(keyword)
+        );
+
+        matched.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.name}</td>
+                <td><span class="qty-tag">${item.qty}</span></td>
+                <td>${item.batch}</td>
+                <td style="color:#666;">${item.date}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    window.onload = init;
+</script>
+
+</body>
+</html>
