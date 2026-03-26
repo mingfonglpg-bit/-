@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>3月庫存查詢系統 - Pro版</title>
+    <title>3月庫存查詢系統 - 視覺強化版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { 
@@ -13,12 +13,14 @@
             --accent: #10b981; 
             --text-main: #f1f5f9;
             --text-dim: #94a3b8;
-            --danger: #ff4d4d;
+            /* 強化後的明亮顏色 */
+            --bright-qty: #ccff00; /* 螢光黃綠，極度明亮 */
+            --danger-bg: rgba(204, 255, 0, 0.15);
             --border: rgba(255, 255, 255, 0.1);
         }
 
         body { 
-            font-family: -apple-system, "Noto Sans TC", sans-serif; 
+            font-family: -apple-system, "Noto Sans TC", "Microsoft JhengHei", sans-serif; 
             background-color: var(--bg); 
             color: var(--text-main);
             margin: 0; 
@@ -32,11 +34,10 @@
             background: var(--card-bg); 
             padding: 20px; 
             border-radius: 20px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             border: 1px solid var(--border);
         }
         
-        /* 返回按鈕：綠色系，醒目導航 */
         .nav-header { margin-bottom: 20px; }
         .btn-back { 
             display: inline-flex; align-items: center; gap: 8px;
@@ -44,54 +45,55 @@
             text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 15px;
             border: 2px solid var(--accent); transition: 0.2s;
         }
-        .btn-back:active { background: var(--accent); color: white; }
 
-        /* 分頁切換：亮藍色系 */
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
         .tab-btn { 
             flex: 1; padding: 14px; border: 1px solid var(--border); 
             background: rgba(255,255,255,0.05); color: var(--text-dim);
             cursor: pointer; border-radius: 12px; font-weight: bold; font-size: 15px; 
         }
-        .tab-btn.active { background: var(--primary); color: #000; border: none; box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4); }
+        .tab-btn.active { background: var(--primary); color: #000; border: none; box-shadow: 0 4px 15px rgba(56, 189, 248, 0.5); }
 
-        /* 搜尋框：深色優化 */
         .search-box { 
             width: 100%; padding: 15px; font-size: 16px; 
-            background: rgba(0,0,0,0.2); border: 1px solid var(--border); 
+            background: rgba(0,0,0,0.3); border: 1px solid var(--border); 
             border-radius: 12px; color: white; outline: none; margin-bottom: 20px;
             box-sizing: border-box;
         }
-        .search-box:focus { border-color: var(--primary); }
 
-        /* 表格樣式優化 */
         .table-container { min-height: 400px; overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
-        th { background: rgba(0,0,0,0.3); color: var(--primary); padding: 12px 10px; text-align: left; font-size: 13px; border-bottom: 2px solid var(--border); }
-        td { padding: 16px 10px; border-bottom: 1px solid var(--border); font-size: 15px; vertical-align: middle; }
+        th { background: rgba(0,0,0,0.4); color: var(--primary); padding: 14px 10px; text-align: left; font-size: 13px; border-bottom: 2px solid var(--border); text-transform: uppercase; }
+        td { padding: 18px 10px; border-bottom: 1px solid var(--border); font-size: 15px; vertical-align: middle; }
         tr:nth-child(even) { background: rgba(255,255,255,0.02); }
 
-        /* 庫存數量標籤：極顯眼紅色 */
+        /* --- 數量顏色明亮優化 --- */
         .qty-tag { 
-            font-weight: 900; color: var(--danger); background: rgba(255, 77, 77, 0.1); 
-            padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255, 77, 77, 0.2);
-            font-family: 'Courier New', monospace;
+            font-weight: 900; 
+            color: var(--bright-qty); 
+            background: var(--danger-bg); 
+            padding: 6px 12px; 
+            border-radius: 8px; 
+            border: 1px solid rgba(204, 255, 0, 0.3);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 18px; /* 稍微加大字體 */
+            text-shadow: 0 0 8px rgba(204, 255, 0, 0.5); /* 增加發光感 */
         }
 
-        /* 頁碼控制 */
         .pagination { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 25px; }
         .page-btn { 
-            padding: 10px 20px; border: 1px solid var(--border); background: transparent; 
+            padding: 10px 20px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); 
             color: var(--text-main); border-radius: 10px; cursor: pointer; 
         }
-        .page-btn:disabled { opacity: 0.3; }
+        .page-btn:disabled { opacity: 0.2; }
         .page-info { font-weight: bold; color: var(--primary); }
 
         .loading { text-align: center; padding: 50px; color: var(--text-dim); }
 
         @media (max-width: 480px) {
-            td { font-size: 14px; padding: 12px 8px; }
+            td { font-size: 14px; padding: 14px 8px; }
             .btn-back { width: 100%; justify-content: center; }
+            .qty-tag { font-size: 16px; padding: 4px 8px; }
         }
     </style>
 </head>
@@ -107,9 +109,9 @@
         <button class="tab-btn" onclick="switchTab('chilled', this)">🌡️ 冷藏/常溫</button>
     </div>
 
-    <input type="text" id="searchInput" class="search-box" placeholder="輸入產品關鍵字搜尋..." oninput="handleSearch()">
+    <input type="text" id="searchInput" class="search-box" placeholder="輸入產品名稱或批號..." oninput="handleSearch()">
 
-    <div id="loader" class="loading">⌛ 正在讀取庫存 CSV 資料...</div>
+    <div id="loader" class="loading">📡 資料同步中，請稍候...</div>
 
     <div class="table-container">
         <table id="resultTable" style="display:none;">
@@ -126,7 +128,7 @@
 </div>
 
 <script>
-    // --- CSV 讀取與邏輯部分 (保持原有功能) ---
+    // --- 核心邏輯保持不變 ---
     const CONFIG = { frozen: 'frozen.csv', chilled: 'chilled.csv' };
     const ROWS_PER_PAGE = 10;
     let dataStore = { frozen: [], chilled: [] };
@@ -203,17 +205,13 @@
     function updateHeader() {
         const header = document.getElementById('tableHeader');
         if (currentTab === 'frozen') {
-            header.innerHTML = '<th width="45%">冷凍品項名稱</th><th width="15%">數量</th><th width="20%">批號</th><th width="20%">效期</th>';
+            header.innerHTML = '<th width="45%">產品</th><th width="15%">數量</th><th width="20%">批號</th><th width="20%">效期</th>';
         } else {
-            header.innerHTML = '<th width="40%">冷藏/常溫品項</th><th width="15%">數量</th><th width="15%">批號</th><th width="30%">備註/效期</th>';
+            header.innerHTML = '<th width="40%">產品</th><th width="15%">數量</th><th width="15%">批號</th><th width="30%">備註/效期</th>';
         }
     }
 
-    function changePage(step) {
-        currentPage += step;
-        renderTable();
-        window.scrollTo(0, 0);
-    }
+    function changePage(step) { currentPage += step; renderTable(); window.scrollTo(0, 0); }
 
     function renderTable() {
         const tbody = document.getElementById('tableBody');
@@ -222,7 +220,7 @@
         const pageItems = filteredData.slice(start, start + ROWS_PER_PAGE);
 
         if (pageItems.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:50px;">無符合搜尋結果</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:50px;">無符合結果</td></tr>';
         } else {
             pageItems.forEach(item => {
                 const tr = document.createElement('tr');
