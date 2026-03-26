@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>3月庫存查詢系統 - 視覺強化版</title>
+    <title>3月庫存查詢系統 - 欄位優化版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { 
@@ -13,88 +13,62 @@
             --accent: #10b981; 
             --text-main: #f1f5f9;
             --text-dim: #94a3b8;
-            /* 強化後的明亮顏色 */
-            --bright-qty: #ccff00; /* 螢光黃綠，極度明亮 */
-            --danger-bg: rgba(204, 255, 0, 0.15);
+            --bright-qty: #ccff00; /* 螢光黃 */
             --border: rgba(255, 255, 255, 0.1);
         }
 
         body { 
-            font-family: -apple-system, "Noto Sans TC", "Microsoft JhengHei", sans-serif; 
+            font-family: -apple-system, "Noto Sans TC", sans-serif; 
             background-color: var(--bg); 
             color: var(--text-main);
-            margin: 0; 
-            padding: 12px; 
-            line-height: 1.5;
+            margin: 0; padding: 12px; line-height: 1.5;
         }
 
         .container { 
-            max-width: 800px; 
-            margin: auto; 
-            background: var(--card-bg); 
-            padding: 20px; 
-            border-radius: 20px; 
+            max-width: 800px; margin: auto; background: var(--card-bg); 
+            padding: 20px; border-radius: 20px; border: 1px solid var(--border);
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            border: 1px solid var(--border);
         }
         
         .nav-header { margin-bottom: 20px; }
         .btn-back { 
             display: inline-flex; align-items: center; gap: 8px;
             padding: 12px 24px; background: transparent; color: var(--accent); 
-            text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 15px;
-            border: 2px solid var(--accent); transition: 0.2s;
+            text-decoration: none; border-radius: 12px; font-weight: bold; border: 2px solid var(--accent);
         }
 
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
         .tab-btn { 
             flex: 1; padding: 14px; border: 1px solid var(--border); 
             background: rgba(255,255,255,0.05); color: var(--text-dim);
-            cursor: pointer; border-radius: 12px; font-weight: bold; font-size: 15px; 
+            cursor: pointer; border-radius: 12px; font-weight: bold;
         }
         .tab-btn.active { background: var(--primary); color: #000; border: none; box-shadow: 0 4px 15px rgba(56, 189, 248, 0.5); }
 
         .search-box { 
             width: 100%; padding: 15px; font-size: 16px; 
             background: rgba(0,0,0,0.3); border: 1px solid var(--border); 
-            border-radius: 12px; color: white; outline: none; margin-bottom: 20px;
-            box-sizing: border-box;
+            border-radius: 12px; color: white; outline: none; margin-bottom: 20px; box-sizing: border-box;
         }
 
         .table-container { min-height: 400px; overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
-        th { background: rgba(0,0,0,0.4); color: var(--primary); padding: 14px 10px; text-align: left; font-size: 13px; border-bottom: 2px solid var(--border); text-transform: uppercase; }
-        td { padding: 18px 10px; border-bottom: 1px solid var(--border); font-size: 15px; vertical-align: middle; }
+        th { background: rgba(0,0,0,0.4); color: var(--primary); padding: 14px 10px; text-align: left; font-size: 13px; border-bottom: 2px solid var(--border); }
+        td { padding: 18px 10px; border-bottom: 1px solid var(--border); font-size: 15px; }
         tr:nth-child(even) { background: rgba(255,255,255,0.02); }
 
-        /* --- 數量顏色明亮優化 --- */
         .qty-tag { 
-            font-weight: 900; 
-            color: var(--bright-qty); 
-            background: var(--danger-bg); 
-            padding: 6px 12px; 
-            border-radius: 8px; 
-            border: 1px solid rgba(204, 255, 0, 0.3);
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 18px; /* 稍微加大字體 */
-            text-shadow: 0 0 8px rgba(204, 255, 0, 0.5); /* 增加發光感 */
+            font-weight: 900; color: var(--bright-qty); background: rgba(204, 255, 0, 0.15); 
+            padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(204, 255, 0, 0.3);
+            font-family: monospace; font-size: 18px; text-shadow: 0 0 8px rgba(204, 255, 0, 0.5);
         }
 
         .pagination { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 25px; }
-        .page-btn { 
-            padding: 10px 20px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); 
-            color: var(--text-main); border-radius: 10px; cursor: pointer; 
-        }
+        .page-btn { padding: 10px 20px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: var(--text-main); border-radius: 10px; }
         .page-btn:disabled { opacity: 0.2; }
         .page-info { font-weight: bold; color: var(--primary); }
 
         .loading { text-align: center; padding: 50px; color: var(--text-dim); }
-
-        @media (max-width: 480px) {
-            td { font-size: 14px; padding: 14px 8px; }
-            .btn-back { width: 100%; justify-content: center; }
-            .qty-tag { font-size: 16px; padding: 4px 8px; }
-        }
     </style>
 </head>
 <body>
@@ -109,9 +83,9 @@
         <button class="tab-btn" onclick="switchTab('chilled', this)">🌡️ 冷藏/常溫</button>
     </div>
 
-    <input type="text" id="searchInput" class="search-box" placeholder="輸入產品名稱或批號..." oninput="handleSearch()">
+    <input type="text" id="searchInput" class="search-box" placeholder="搜尋產品或批號..." oninput="handleSearch()">
 
-    <div id="loader" class="loading">📡 資料同步中，請稍候...</div>
+    <div id="loader" class="loading">📡 資料同步中...</div>
 
     <div class="table-container">
         <table id="resultTable" style="display:none;">
@@ -128,7 +102,6 @@
 </div>
 
 <script>
-    // --- 核心邏輯保持不變 ---
     const CONFIG = { frozen: 'frozen.csv', chilled: 'chilled.csv' };
     const ROWS_PER_PAGE = 10;
     let dataStore = { frozen: [], chilled: [] };
@@ -152,12 +125,12 @@
                     for (let i = 1; i < rows.length && i < 411; i++) {
                         const r = rows[i];
                         if (type === 'frozen') {
-                            if (r[0] || r[1] || r[2]) {
+                            if (r[1] || r[2]) { // 判斷 B 或 C 欄是否有值
                                 dataStore.frozen.push({
-                                    name: `${r[0]||''} ${r[1]||''} ${r[2]||''}`.trim(),
-                                    col1: r[37] || "0",
-                                    col2: r[38] || "-",
-                                    col3: formatExcelDate(r[39])
+                                    name: `${r[1]||''} ${r[2]||''}`.trim(), // 抓取 B (r[1]) 與 C (r[2])
+                                    col1: r[37] || "0", // AL 欄
+                                    col2: r[38] || "-", // AM 欄
+                                    col3: formatExcelDate(r[39]) // AN 欄
                                 });
                             }
                         } else {
@@ -205,9 +178,9 @@
     function updateHeader() {
         const header = document.getElementById('tableHeader');
         if (currentTab === 'frozen') {
-            header.innerHTML = '<th width="45%">產品</th><th width="15%">數量</th><th width="20%">批號</th><th width="20%">效期</th>';
+            header.innerHTML = '<th width="45%">冷凍品項</th><th width="15%">庫存量</th><th width="20%">批號</th><th width="20%">有效日期</th>';
         } else {
-            header.innerHTML = '<th width="40%">產品</th><th width="15%">數量</th><th width="15%">批號</th><th width="30%">備註/效期</th>';
+            header.innerHTML = '<th width="40%">品項名稱</th><th width="15%">庫存量</th><th width="15%">批號</th><th width="30%">備註/效期</th>';
         }
     }
 
@@ -220,7 +193,7 @@
         const pageItems = filteredData.slice(start, start + ROWS_PER_PAGE);
 
         if (pageItems.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:50px;">無符合結果</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:50px;">無資料</td></tr>';
         } else {
             pageItems.forEach(item => {
                 const tr = document.createElement('tr');
@@ -240,6 +213,5 @@
 
     window.onload = () => { fetchCSV('frozen'); fetchCSV('chilled'); };
 </script>
-
 </body>
 </html>
