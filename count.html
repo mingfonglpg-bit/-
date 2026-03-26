@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>3月庫存查詢系統 - 名稱修正版</title>
+    <title>3月庫存查詢系統 - 欄位精準版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { 
@@ -28,7 +28,7 @@
         td { padding: 16px 10px; border-bottom: 1px solid var(--border); font-size: 15px; vertical-align: middle; }
         .qty-tag { font-weight: 900; color: var(--bright-qty); background: rgba(204, 255, 0, 0.1); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(204, 255, 0, 0.2); font-family: monospace; font-size: 18px; display: inline-block; }
         .low-stock { background: var(--alert) !important; color: white !important; animation: blink 1s infinite; box-shadow: 0 0 12px var(--alert); border: none; }
-        .expiry-alert { color: #fff; background: var(--alert); padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; display: inline-block; margin-top: 4px; animation: blink 1.5s infinite; }
+        .expiry-alert { color: #fff; background: var(--alert); padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; display: inline-block; margin-top: 4px; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
         .pagination { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 25px; }
         .page-btn { padding: 10px 20px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: var(--text-main); border-radius: 10px; cursor: pointer; }
@@ -43,8 +43,8 @@
         <button id="btn-frozen" class="tab-btn active" onclick="switchTab('frozen', this)">❄️ 冷凍品庫存</button>
         <button id="btn-chilled" class="tab-btn" onclick="switchTab('chilled', this)">🌡️ 冷藏/常溫</button>
     </div>
-    <input type="text" id="searchInput" class="search-box" placeholder="輸入產品或批號搜尋..." oninput="handleSearch()">
-    <div id="loader" style="text-align:center; padding:50px; color:var(--text-dim);">⌛ 庫存數據更新中...</div>
+    <input type="text" id="searchInput" class="search-box" placeholder="搜尋品項或批號..." oninput="handleSearch()">
+    <div id="loader" style="text-align:center; padding:50px; color:var(--text-dim);">⌛ 正在讀取 AG 欄位庫存資料...</div>
     <div class="table-container">
         <table id="resultTable" style="display:none;">
             <thead><tr id="tableHeader"></tr></thead>
@@ -87,9 +87,10 @@
 
     async function fetchCSV(type) {
         try {
-            const response = await fetch(CONFIG[type]);
+            const response = await fetch(CONFIG[type] + '?t=' + new Date().getTime());
             const text = await response.text();
             Papa.parse(text, {
+                skipEmptyLines: true,
                 complete: function(results) {
                     const rows = results.data;
                     for (let i = 1; i < rows.length; i++) {
@@ -100,35 +101,30 @@
                             if (r[1] || r[2]) {
                                 dataStore.frozen.push({
                                     name: `${r[1]||''} ${r[2]||''}`.trim(),
-                                    qty: parseFloat(r[37]) || 0,
-                                    batch: r[38] || "-",
-                                    date: formatExcelDate(r[39])
+                                    qty: parseFloat(r[37]) || 0, // AL 欄
+                                    batch: r[38] || "-", 
+                                    date: formatExcelDate(r[39]) // AN 欄
                                 });
                             }
                         } else {
-                            // 冷藏品邏輯修正：
-                            // 1. 名稱判斷：如果 A 欄是空值或純數字，則改用 B 欄作為名稱（視您的 CSV 結構而定）
-                            // 這裡設定為：優先合併 A 與 B 作為名稱，若 A 為純數字則取 B
-                            let chilledName = (r[0] || "").trim();
-                            if (!isNaN(chilledName) && chilledName !== "") {
-                                chilledName = (r[1] || "").trim(); // 如果 A 是編號，名稱通常在 B
-                            } else if (chilledName === "") {
-                                chilledName = (r[1] || "").trim();
-                            }
+                            // 冷藏品邏輯修正
+                            let cName = (r[1] || "").trim(); // 品名在 B 欄 (Index 1)
+                            let cQty = r[32] ? parseFloat(r[32]) : 0; // 庫存量在 AG 欄 (Index 32)
 
-                            if (chilledName) {
+                            if (cName !== "" && cName !== "undefined") {
                                 dataStore.chilled.push({
-                                    name: chilledName,
-                                    qty: parseFloat(r[1]) || 0, // 庫存量固定看 B 欄
-                                    batch: r[33] || "-",        // AH 欄
-                                    date1: r[34] || "-",       // AI 欄
-                                    date2: r[35] || "-"        // AJ 欄
+                                    name: cName,
+                                    qty: cQty,
+                                    batch: r[33] || "-", // AH 欄
+                                    date1: r[34] || "-", // AI 欄
+                                    date2: r[35] || "-"  // AJ 欄
                                 });
                             }
                         }
                     }
-                    if (type === 'frozen') fetchCSV('chilled'); 
-                    if (type === 'chilled') {
+                    if (type === 'frozen') {
+                        fetchCSV('chilled'); 
+                    } else {
                         document.getElementById('loader').style.display = 'none';
                         document.getElementById('resultTable').style.display = 'table';
                         document.getElementById('paginationCtrl').style.display = 'flex';
@@ -136,7 +132,7 @@
                     }
                 }
             });
-        } catch (e) { console.error("CSV 加載出錯:", e); }
+        } catch (e) { console.error("CSV 加載失敗:", e); }
     }
 
     function handleSearch() {
@@ -155,7 +151,7 @@
         if (currentTab === 'frozen') {
             header.innerHTML = '<th width="40%">冷凍品項</th><th width="15%">庫存量</th><th width="20%">批號</th><th width="25%">有效日期</th>';
         } else {
-            header.innerHTML = '<th width="40%">冷藏/常溫品項</th><th width="15%">庫存量</th><th width="15%">批號</th><th width="30%">有效日期</th>';
+            header.innerHTML = '<th width="40%">冷藏/常溫品項(B)</th><th width="15%">庫存(AG)</th><th width="15%">批號</th><th width="30%">有效日期</th>';
         }
     }
 
@@ -166,7 +162,7 @@
         const pageItems = filteredData.slice(start, start + ROWS_PER_PAGE);
 
         if (pageItems.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:50px; color:var(--text-dim);">無匹配庫存資料</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:50px;">查無庫存數據</td></tr>';
         } else {
             pageItems.forEach(item => {
                 const tr = document.createElement('tr');
