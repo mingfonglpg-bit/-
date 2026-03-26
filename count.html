@@ -133,9 +133,9 @@
     function updateHeader() {
         const header = document.getElementById('tableHeader');
         if (currentTab === 'frozen') {
-            header.innerHTML = '<th width="45%">冷凍品項 (A+B+C)</th><th width="15%">數量</th><th width="20%">批號(AM)</th><th width="20%">日期(AN)</th>';
+            header.innerHTML = '<th width="45%">冷凍品項</th><th width="15%">庫存數量</th><th width="20%">批號</th><th width="20%">有效日期</th>';
         } else {
-            header.innerHTML = '<th width="40%">冷藏品項 (A+B)</th><th width="15%">數量(AG)</th><th width="15%">資料(AH)</th><th width="30%">效期(AI/AJ)</th>';
+            header.innerHTML = '<th width="40%">冷藏品項 </th><th width="15%">庫存數量</th><th width="15%">資料</th><th width="30%">有效日期</th>';
         }
     }
 
