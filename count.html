@@ -2,99 +2,95 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3月庫存查詢系統 Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>3月庫存查詢系統 - Pro版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { 
-            --primary: #6366f1; 
-            --accent: #0ea5e9; 
             --bg: #0f172a; 
-            --card-bg: rgba(30, 41, 59, 0.7);
-            --text-main: #f8fafc;
+            --card-bg: #1e293b;
+            --primary: #38bdf8; 
+            --accent: #10b981; 
+            --text-main: #f1f5f9;
             --text-dim: #94a3b8;
+            --danger: #ff4d4d;
             --border: rgba(255, 255, 255, 0.1);
-            --qty-bg: rgba(239, 68, 68, 0.15);
-            --qty-text: #ef4444;
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background: radial-gradient(circle at top right, #1e293b, #0f172a);
-            color: var(--text-main); 
+            font-family: -apple-system, "Noto Sans TC", sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text-main);
             margin: 0; 
-            padding: 10px;
-            min-height: 100vh;
+            padding: 12px; 
+            line-height: 1.5;
         }
 
         .container { 
             max-width: 800px; 
             margin: auto; 
             background: var(--card-bg); 
-            backdrop-filter: blur(15px);
             padding: 20px; 
-            border-radius: 24px; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
             border: 1px solid var(--border);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
         }
-
-        /* 返回按鈕優化 */
+        
+        /* 返回按鈕：綠色系，醒目導航 */
         .nav-header { margin-bottom: 20px; }
         .btn-back { 
             display: inline-flex; align-items: center; gap: 8px;
-            padding: 12px 20px; background: rgba(255,255,255,0.05); color: white; 
-            text-decoration: none; border-radius: 14px; font-weight: 600; font-size: 14px;
-            border: 1px solid var(--border); transition: 0.3s;
+            padding: 12px 24px; background: transparent; color: var(--accent); 
+            text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 15px;
+            border: 2px solid var(--accent); transition: 0.2s;
         }
-        .btn-back:active { transform: scale(0.95); background: rgba(255,255,255,0.1); }
+        .btn-back:active { background: var(--accent); color: white; }
 
-        /* 分頁標籤優化 */
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 16px; }
+        /* 分頁切換：亮藍色系 */
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
         .tab-btn { 
-            flex: 1; padding: 12px; border: none; background: transparent; 
-            color: var(--text-dim); cursor: pointer; border-radius: 12px; 
-            font-weight: bold; font-size: 14px; transition: 0.3s;
+            flex: 1; padding: 14px; border: 1px solid var(--border); 
+            background: rgba(255,255,255,0.05); color: var(--text-dim);
+            cursor: pointer; border-radius: 12px; font-weight: bold; font-size: 15px; 
         }
-        .tab-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
+        .tab-btn.active { background: var(--primary); color: #000; border: none; box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4); }
 
-        /* 搜尋框優化 */
+        /* 搜尋框：深色優化 */
         .search-box { 
-            width: 100%; padding: 15px 20px; font-size: 16px; 
-            background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); 
-            border-radius: 18px; color: white; outline: none; margin-bottom: 20px;
-            transition: 0.3s;
+            width: 100%; padding: 15px; font-size: 16px; 
+            background: rgba(0,0,0,0.2); border: 1px solid var(--border); 
+            border-radius: 12px; color: white; outline: none; margin-bottom: 20px;
+            box-sizing: border-box;
         }
-        .search-box:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1); }
+        .search-box:focus { border-color: var(--primary); }
 
-        /* 表格優化 */
+        /* 表格樣式優化 */
         .table-container { min-height: 400px; overflow-x: auto; }
-        table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        th { background: rgba(255,255,255,0.05); color: var(--text-dim); padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
-        td { padding: 16px 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
-        
+        table { width: 100%; border-collapse: collapse; }
+        th { background: rgba(0,0,0,0.3); color: var(--primary); padding: 12px 10px; text-align: left; font-size: 13px; border-bottom: 2px solid var(--border); }
+        td { padding: 16px 10px; border-bottom: 1px solid var(--border); font-size: 15px; vertical-align: middle; }
+        tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+
+        /* 庫存數量標籤：極顯眼紅色 */
         .qty-tag { 
-            font-weight: 800; color: var(--qty-text); background: var(--qty-bg); 
-            padding: 4px 10px; border-radius: 8px; font-family: monospace; font-size: 15px;
+            font-weight: 900; color: var(--danger); background: rgba(255, 77, 77, 0.1); 
+            padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255, 77, 77, 0.2);
+            font-family: 'Courier New', monospace;
         }
 
-        /* 頁碼優化 */
+        /* 頁碼控制 */
         .pagination { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 25px; }
         .page-btn { 
-            padding: 10px 18px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); 
-            color: white; border-radius: 12px; cursor: pointer; font-size: 14px;
+            padding: 10px 20px; border: 1px solid var(--border); background: transparent; 
+            color: var(--text-main); border-radius: 10px; cursor: pointer; 
         }
-        .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-        .page-info { font-size: 13px; color: var(--text-dim); font-weight: 600; }
+        .page-btn:disabled { opacity: 0.3; }
+        .page-info { font-weight: bold; color: var(--primary); }
 
-        .loading { text-align: center; padding: 60px; color: var(--text-dim); font-style: italic; }
+        .loading { text-align: center; padding: 50px; color: var(--text-dim); }
 
-        /* 手機版適配 */
-        @media screen and (max-width: 600px) {
-            .container { padding: 15px; border-radius: 20px; }
-            td, th { padding: 10px 8px; font-size: 13px; }
-            .qty-tag { padding: 2px 6px; font-size: 13px; }
+        @media (max-width: 480px) {
+            td { font-size: 14px; padding: 12px 8px; }
             .btn-back { width: 100%; justify-content: center; }
         }
     </style>
@@ -107,13 +103,13 @@
     </div>
 
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('frozen', this)">❄️ 冷凍品</button>
+        <button class="tab-btn active" onclick="switchTab('frozen', this)">❄️ 冷凍品庫存</button>
         <button class="tab-btn" onclick="switchTab('chilled', this)">🌡️ 冷藏/常溫</button>
     </div>
 
-    <input type="text" id="searchInput" class="search-box" placeholder="輸入產品或批號關鍵字..." oninput="handleSearch()">
+    <input type="text" id="searchInput" class="search-box" placeholder="輸入產品關鍵字搜尋..." oninput="handleSearch()">
 
-    <div id="loader" class="loading">正在同步雲端庫存數據...</div>
+    <div id="loader" class="loading">⌛ 正在讀取庫存 CSV 資料...</div>
 
     <div class="table-container">
         <table id="resultTable" style="display:none;">
@@ -124,13 +120,13 @@
 
     <div id="paginationCtrl" class="pagination" style="display:none;">
         <button id="prevBtn" class="page-btn" onclick="changePage(-1)">上一頁</button>
-        <span id="pageInfo" class="page-info">PAGE 1 / 1</span>
+        <span id="pageInfo" class="page-info">第 1 頁</span>
         <button id="nextBtn" class="page-btn" onclick="changePage(1)">下一頁</button>
     </div>
 </div>
 
 <script>
-    // --- 原始邏輯保留 ---
+    // --- CSV 讀取與邏輯部分 (保持原有功能) ---
     const CONFIG = { frozen: 'frozen.csv', chilled: 'chilled.csv' };
     const ROWS_PER_PAGE = 10;
     let dataStore = { frozen: [], chilled: [] };
@@ -207,13 +203,17 @@
     function updateHeader() {
         const header = document.getElementById('tableHeader');
         if (currentTab === 'frozen') {
-            header.innerHTML = '<th width="45%">冷凍品項</th><th width="15%">數量</th><th width="20%">批號</th><th width="20%">效期</th>';
+            header.innerHTML = '<th width="45%">冷凍品項名稱</th><th width="15%">數量</th><th width="20%">批號</th><th width="20%">效期</th>';
         } else {
-            header.innerHTML = '<th width="40%">冷藏/常溫</th><th width="15%">數量</th><th width="15%">規格</th><th width="30%">有效日期</th>';
+            header.innerHTML = '<th width="40%">冷藏/常溫品項</th><th width="15%">數量</th><th width="15%">批號</th><th width="30%">備註/效期</th>';
         }
     }
 
-    function changePage(step) { currentPage += step; renderTable(); window.scrollTo(0, 0); }
+    function changePage(step) {
+        currentPage += step;
+        renderTable();
+        window.scrollTo(0, 0);
+    }
 
     function renderTable() {
         const tbody = document.getElementById('tableBody');
@@ -222,25 +222,26 @@
         const pageItems = filteredData.slice(start, start + ROWS_PER_PAGE);
 
         if (pageItems.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:50px; color:var(--text-dim);">未找到相關資料</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:50px;">無符合搜尋結果</td></tr>';
         } else {
             pageItems.forEach(item => {
                 const tr = document.createElement('tr');
                 if (currentTab === 'frozen') {
-                    tr.innerHTML = `<td><b>${item.name}</b></td><td><span class="qty-tag">${item.col1}</span></td><td><code>${item.col2}</code></td><td style="color:var(--text-dim); font-size:12px;">${item.col3}</td>`;
+                    tr.innerHTML = `<td><b>${item.name}</b></td><td><span class="qty-tag">${item.col1}</span></td><td>${item.col2}</td><td style="color:var(--text-dim); font-size:13px;">${item.col3}</td>`;
                 } else {
-                    tr.innerHTML = `<td><b>${item.name}</b></td><td><span class="qty-tag">${item.col1}</span></td><td><small>${item.col2}</small></td><td style="color:var(--text-dim); font-size:12px;">${item.col3}<br>${item.col4}</td>`;
+                    tr.innerHTML = `<td><b>${item.name}</b></td><td><span class="qty-tag">${item.col1}</span></td><td>${item.col2}</td><td style="color:var(--text-dim); font-size:13px;">${item.col3}<br>${item.col4}</td>`;
                 }
                 tbody.appendChild(tr);
             });
         }
         const maxPage = Math.ceil(filteredData.length / ROWS_PER_PAGE) || 1;
-        document.getElementById('pageInfo').innerText = `PAGE ${currentPage} / ${maxPage}`;
+        document.getElementById('pageInfo').innerText = `第 ${currentPage} / ${maxPage} 頁`;
         document.getElementById('prevBtn').disabled = (currentPage === 1);
         document.getElementById('nextBtn').disabled = (currentPage === maxPage);
     }
 
     window.onload = () => { fetchCSV('frozen'); fetchCSV('chilled'); };
 </script>
+
 </body>
 </html>
