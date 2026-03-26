@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>3月庫存查詢系統 - 資料修復版</title>
+    <title>3月庫存查詢系統 - 名稱修正版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { 
@@ -43,8 +43,8 @@
         <button id="btn-frozen" class="tab-btn active" onclick="switchTab('frozen', this)">❄️ 冷凍品庫存</button>
         <button id="btn-chilled" class="tab-btn" onclick="switchTab('chilled', this)">🌡️ 冷藏/常溫</button>
     </div>
-    <input type="text" id="searchInput" class="search-box" placeholder="輸入產品或批號關鍵字搜尋..." oninput="handleSearch()">
-    <div id="loader" style="text-align:center; padding:50px; color:var(--text-dim);">⌛ 正在載入庫存數據...</div>
+    <input type="text" id="searchInput" class="search-box" placeholder="輸入產品或批號搜尋..." oninput="handleSearch()">
+    <div id="loader" style="text-align:center; padding:50px; color:var(--text-dim);">⌛ 庫存數據更新中...</div>
     <div class="table-container">
         <table id="resultTable" style="display:none;">
             <thead><tr id="tableHeader"></tr></thead>
@@ -92,29 +92,37 @@
             Papa.parse(text, {
                 complete: function(results) {
                     const rows = results.data;
-                    // 跳過標題列 i=1 開始
                     for (let i = 1; i < rows.length; i++) {
                         const r = rows[i];
-                        if (!r || r.length < 2) continue;
+                        if (!r || r.length < 5) continue;
 
                         if (type === 'frozen') {
                             if (r[1] || r[2]) {
                                 dataStore.frozen.push({
                                     name: `${r[1]||''} ${r[2]||''}`.trim(),
-                                    qty: parseFloat(r[37]) || 0, // AL 欄
-                                    batch: r[38] || "-",          // AM 欄
-                                    date: formatExcelDate(r[39]) // AN 欄
+                                    qty: parseFloat(r[37]) || 0,
+                                    batch: r[38] || "-",
+                                    date: formatExcelDate(r[39])
                                 });
                             }
                         } else {
-                            // 冷藏品邏輯：確保 A 欄或 B 欄有內容就抓取
-                            if (r[0] || r[1]) {
+                            // 冷藏品邏輯修正：
+                            // 1. 名稱判斷：如果 A 欄是空值或純數字，則改用 B 欄作為名稱（視您的 CSV 結構而定）
+                            // 這裡設定為：優先合併 A 與 B 作為名稱，若 A 為純數字則取 B
+                            let chilledName = (r[0] || "").trim();
+                            if (!isNaN(chilledName) && chilledName !== "") {
+                                chilledName = (r[1] || "").trim(); // 如果 A 是編號，名稱通常在 B
+                            } else if (chilledName === "") {
+                                chilledName = (r[1] || "").trim();
+                            }
+
+                            if (chilledName) {
                                 dataStore.chilled.push({
-                                    name: (r[0] || "未命名品項").trim(), // A 欄
-                                    qty: parseFloat(r[1]) || 0,          // B 欄
-                                    batch: r[33] || "-",                  // AH 欄 (原邏輯)
-                                    date1: r[34] || "-",                 // AI 欄
-                                    date2: r[35] || "-"                  // AJ 欄
+                                    name: chilledName,
+                                    qty: parseFloat(r[1]) || 0, // 庫存量固定看 B 欄
+                                    batch: r[33] || "-",        // AH 欄
+                                    date1: r[34] || "-",       // AI 欄
+                                    date2: r[35] || "-"        // AJ 欄
                                 });
                             }
                         }
@@ -128,7 +136,7 @@
                     }
                 }
             });
-        } catch (e) { console.error("讀取 CSV 失敗:", e); }
+        } catch (e) { console.error("CSV 加載出錯:", e); }
     }
 
     function handleSearch() {
@@ -147,7 +155,7 @@
         if (currentTab === 'frozen') {
             header.innerHTML = '<th width="40%">冷凍品項</th><th width="15%">庫存量</th><th width="20%">批號</th><th width="25%">有效日期</th>';
         } else {
-            header.innerHTML = '<th width="40%">冷藏/常溫品項</th><th width="15%">庫存量</th><th width="15%">批號</th><th width="30%">有效日期 (AI/AJ)</th>';
+            header.innerHTML = '<th width="40%">冷藏/常溫品項</th><th width="15%">庫存量</th><th width="15%">批號</th><th width="30%">有效日期</th>';
         }
     }
 
@@ -158,7 +166,7 @@
         const pageItems = filteredData.slice(start, start + ROWS_PER_PAGE);
 
         if (pageItems.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:50px; color:var(--text-dim);">查無資料</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:50px; color:var(--text-dim);">無匹配庫存資料</td></tr>';
         } else {
             pageItems.forEach(item => {
                 const tr = document.createElement('tr');
