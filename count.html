@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3月庫存系統 - 欄位優化版</title>
+    <title>3月庫存查詢系統</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { --primary: #2c3e50; --accent: #3498db; --bg: #f4f7f6; }
@@ -40,8 +40,7 @@
     <div class="table-container">
         <table id="resultTable" style="display:none;">
             <thead>
-                <tr id="tableHeader">
-                    </tr>
+                <tr id="tableHeader"></tr>
             </thead>
             <tbody id="tableBody"></tbody>
         </table>
@@ -83,9 +82,9 @@
                             if (r[0] || r[1] || r[2]) {
                                 dataStore.frozen.push({
                                     name: `${r[0]||''} ${r[1]||''} ${r[2]||''}`.trim(),
-                                    col1: r[37] || "0", // 數量
-                                    col2: r[38] || "-", // 批號
-                                    col3: formatExcelDate(r[39]) // 日期
+                                    col1: r[37] || "0", // 數量 (AL)
+                                    col2: r[38] || "-", // 批號 (AM)
+                                    col3: formatExcelDate(r[39]) // 日期 (AN)
                                 });
                             }
                         } else {
@@ -93,10 +92,10 @@
                             if (r[0] || r[1]) {
                                 dataStore.chilled.push({
                                     name: `${r[0]||''} ${r[1]||''}`.trim(),
-                                    col1: r[32] || "0", // AG
-                                    col2: r[33] || "-", // AH
-                                    col3: r[34] || "-", // AI
-                                    col4: r[35] || "-"  // AJ
+                                    col1: r[32] || "0", // 數量 (AG)
+                                    col2: r[33] || "-", // 批號/規格 (AH)
+                                    col3: r[34] || "-", // 效期1 (AI)
+                                    col4: r[35] || "-"  // 效期2 (AJ)
                                 });
                             }
                         }
@@ -124,7 +123,7 @@
         const keyword = document.getElementById('searchInput').value.toLowerCase();
         filteredData = dataStore[currentTab].filter(item => 
             item.name.toLowerCase().includes(keyword) || 
-            (item.col2 && item.col2.toLowerCase().includes(keyword))
+            (item.col2 && item.col2.toString().toLowerCase().includes(keyword))
         );
         currentPage = 1;
         updateHeader();
@@ -134,9 +133,9 @@
     function updateHeader() {
         const header = document.getElementById('tableHeader');
         if (currentTab === 'frozen') {
-            header.innerHTML = '<th width="50%">品項規格</th><th width="20%">數量</th><th width="30%">批號/日期</th>';
+            header.innerHTML = '<th width="45%">冷凍品項 (A+B+C)</th><th width="15%">數量</th><th width="20%">批號(AM)</th><th width="20%">日期(AN)</th>';
         } else {
-            header.innerHTML = '<th width="40%">品項</th><th width="15%">數量</th><th width="15%">批號</th><th width="30%">效期</th>';
+            header.innerHTML = '<th width="40%">冷藏品項 (A+B)</th><th width="15%">數量(AG)</th><th width="15%">資料(AH)</th><th width="30%">效期(AI/AJ)</th>';
         }
     }
 
@@ -163,7 +162,8 @@
                     tr.innerHTML = `
                         <td>${item.name}</td>
                         <td><span class="qty-tag">${item.col1}</span></td>
-                        <td style="font-size:12px; color:#666;">${item.col2}<br>${item.col3}</td>
+                        <td>${item.col2}</td>
+                        <td style="font-size:12px; color:#666;">${item.col3}</td>
                     `;
                 } else {
                     tr.innerHTML = `
