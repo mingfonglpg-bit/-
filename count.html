@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>3月庫存查詢系統 - 提醒強化版</title>
+    <title>3月庫存查詢系統 - 資料修復版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { 
@@ -23,12 +23,11 @@
         .tab-btn.active { background: var(--primary); color: #000; border: none; }
         .search-box { width: 100%; padding: 15px; font-size: 16px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; color: white; margin-bottom: 20px; }
         .table-container { min-height: 400px; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        table { width: 100%; border-collapse: collapse; min-width: 650px; }
         th { background: rgba(0,0,0,0.4); color: var(--primary); padding: 14px 10px; text-align: left; font-size: 13px; border-bottom: 2px solid var(--border); }
-        td { padding: 16px 10px; border-bottom: 1px solid var(--border); font-size: 15px; }
-        .qty-tag { font-weight: 900; color: var(--bright-qty); background: rgba(204, 255, 0, 0.1); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(204, 255, 0, 0.2); font-family: monospace; font-size: 18px; }
-        .low-stock { background: var(--alert) !important; color: white !important; animation: blink 1s infinite; box-shadow: 0 0 12px var(--alert); }
-        /* 提醒文字樣式 */
+        td { padding: 16px 10px; border-bottom: 1px solid var(--border); font-size: 15px; vertical-align: middle; }
+        .qty-tag { font-weight: 900; color: var(--bright-qty); background: rgba(204, 255, 0, 0.1); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(204, 255, 0, 0.2); font-family: monospace; font-size: 18px; display: inline-block; }
+        .low-stock { background: var(--alert) !important; color: white !important; animation: blink 1s infinite; box-shadow: 0 0 12px var(--alert); border: none; }
         .expiry-alert { color: #fff; background: var(--alert); padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; display: inline-block; margin-top: 4px; animation: blink 1.5s infinite; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
         .pagination { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 25px; }
@@ -41,11 +40,11 @@
 <div class="container">
     <div class="nav-header"><a href="https://mingfonglpg-bit.github.io/-1-1/android.html" class="btn-back">⬅️ 返回庫位控管</a></div>
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('frozen', this)">❄️ 冷凍品</button>
-        <button class="tab-btn" onclick="switchTab('chilled', this)">🌡️ 冷藏/常溫</button>
+        <button id="btn-frozen" class="tab-btn active" onclick="switchTab('frozen', this)">❄️ 冷凍品庫存</button>
+        <button id="btn-chilled" class="tab-btn" onclick="switchTab('chilled', this)">🌡️ 冷藏/常溫</button>
     </div>
-    <input type="text" id="searchInput" class="search-box" placeholder="搜尋產品或批號..." oninput="handleSearch()">
-    <div id="loader" style="text-align:center; padding:50px; color:var(--text-dim);">📡 資料檢查中...</div>
+    <input type="text" id="searchInput" class="search-box" placeholder="輸入產品或批號關鍵字搜尋..." oninput="handleSearch()">
+    <div id="loader" style="text-align:center; padding:50px; color:var(--text-dim);">⌛ 正在載入庫存數據...</div>
     <div class="table-container">
         <table id="resultTable" style="display:none;">
             <thead><tr id="tableHeader"></tr></thead>
@@ -54,7 +53,7 @@
     </div>
     <div id="paginationCtrl" class="pagination" style="display:none;">
         <button id="prevBtn" class="page-btn" onclick="changePage(-1)">上一頁</button>
-        <span id="pageInfo" class="page-info" style="color:var(--primary); font-weight:bold;">第 1 頁</span>
+        <span id="pageInfo" style="color:var(--primary); font-weight:bold;">第 1 頁</span>
         <button id="nextBtn" class="page-btn" onclick="changePage(1)">下一頁</button>
     </div>
 </div>
@@ -67,29 +66,16 @@
     let currentTab = 'frozen';
     let currentPage = 1;
 
-    // --- 強化版日期檢查函數 ---
     function checkExpiry(dateStr) {
-        if (!dateStr || dateStr === "-" || dateStr.trim() === "") return "";
-        
-        // 將日期中的 / 或 - 統一轉換，以便處理
+        if (!dateStr || dateStr === "-" || dateStr.trim() === "" || dateStr === "undefined") return "";
         const normalizedDate = dateStr.replace(/-/g, '/');
         const expDate = new Date(normalizedDate);
-        
-        // 檢查是否為有效日期物件
         if (isNaN(expDate.getTime())) return "";
-
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // 清除時間干擾，只比日期
-        
-        const diffTime = expDate - today;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        // 如果距離到期日小於等於 14 天，且還沒過期
-        if (diffDays >= 0 && diffDays <= 14) {
-            return `<br><span class="expiry-alert">⚠️ 快到期 (${diffDays}天)</span>`;
-        } else if (diffDays < 0) {
-            return `<br><span class="expiry-alert" style="background:#666;">❌ 已過期</span>`;
-        }
+        today.setHours(0, 0, 0, 0);
+        const diffDays = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+        if (diffDays >= 0 && diffDays <= 14) return `<br><span class="expiry-alert">⚠️ 快到期 (${diffDays}天)</span>`;
+        if (diffDays < 0) return `<br><span class="expiry-alert" style="background:#666;">❌ 已過期</span>`;
         return "";
     }
 
@@ -106,30 +92,35 @@
             Papa.parse(text, {
                 complete: function(results) {
                     const rows = results.data;
-                    for (let i = 1; i < rows.length && i < 411; i++) {
+                    // 跳過標題列 i=1 開始
+                    for (let i = 1; i < rows.length; i++) {
                         const r = rows[i];
+                        if (!r || r.length < 2) continue;
+
                         if (type === 'frozen') {
                             if (r[1] || r[2]) {
                                 dataStore.frozen.push({
                                     name: `${r[1]||''} ${r[2]||''}`.trim(),
-                                    qty: parseFloat(r[37]) || 0, 
-                                    batch: r[38] || "-", 
-                                    date: formatExcelDate(r[39]) 
+                                    qty: parseFloat(r[37]) || 0, // AL 欄
+                                    batch: r[38] || "-",          // AM 欄
+                                    date: formatExcelDate(r[39]) // AN 欄
                                 });
                             }
                         } else {
-                            if (r[0]) {
+                            // 冷藏品邏輯：確保 A 欄或 B 欄有內容就抓取
+                            if (r[0] || r[1]) {
                                 dataStore.chilled.push({
-                                    name: r[0].trim(),
-                                    qty: parseFloat(r[1]) || 0, // B欄 安全庫存提醒
-                                    batch: r[33] || "-", 
-                                    date1: r[34] || "-", // AI欄
-                                    date2: r[35] || "-"  // AJ欄
+                                    name: (r[0] || "未命名品項").trim(), // A 欄
+                                    qty: parseFloat(r[1]) || 0,          // B 欄
+                                    batch: r[33] || "-",                  // AH 欄 (原邏輯)
+                                    date1: r[34] || "-",                 // AI 欄
+                                    date2: r[35] || "-"                  // AJ 欄
                                 });
                             }
                         }
                     }
-                    if (type === 'frozen') {
+                    if (type === 'frozen') fetchCSV('chilled'); 
+                    if (type === 'chilled') {
                         document.getElementById('loader').style.display = 'none';
                         document.getElementById('resultTable').style.display = 'table';
                         document.getElementById('paginationCtrl').style.display = 'flex';
@@ -137,13 +128,14 @@
                     }
                 }
             });
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("讀取 CSV 失敗:", e); }
     }
 
     function handleSearch() {
         const keyword = document.getElementById('searchInput').value.toLowerCase();
         filteredData = dataStore[currentTab].filter(item => 
-            item.name.toLowerCase().includes(keyword) || (item.batch && item.batch.toString().toLowerCase().includes(keyword))
+            item.name.toLowerCase().includes(keyword) || 
+            (item.batch && item.batch.toString().toLowerCase().includes(keyword))
         );
         currentPage = 1;
         updateHeader();
@@ -155,7 +147,7 @@
         if (currentTab === 'frozen') {
             header.innerHTML = '<th width="40%">冷凍品項</th><th width="15%">庫存量</th><th width="20%">批號</th><th width="25%">有效日期</th>';
         } else {
-            header.innerHTML = '<th width="40%">冷藏品項</th><th width="15%">庫存量</th><th width="15%">批號</th><th width="30%">有效日期 (AI/AJ)</th>';
+            header.innerHTML = '<th width="40%">冷藏/常溫品項</th><th width="15%">庫存量</th><th width="15%">批號</th><th width="30%">有效日期 (AI/AJ)</th>';
         }
     }
 
@@ -165,28 +157,24 @@
         const start = (currentPage - 1) * ROWS_PER_PAGE;
         const pageItems = filteredData.slice(start, start + ROWS_PER_PAGE);
 
-        pageItems.forEach(item => {
-            const tr = document.createElement('tr');
-            const isLow = item.qty < 20 ? 'low-stock' : '';
-            
-            if (currentTab === 'frozen') {
-                const alertText = checkExpiry(item.date);
-                tr.innerHTML = `
-                    <td><b>${item.name}</b></td>
-                    <td><span class="qty-tag ${isLow}">${item.qty}</span></td>
-                    <td>${item.batch}</td>
-                    <td style="color:var(--text-dim); font-size:13px;">${item.date}${alertText}</td>`;
-            } else {
-                const alert1 = checkExpiry(item.date1);
-                const alert2 = checkExpiry(item.date2);
-                tr.innerHTML = `
-                    <td><b>${item.name}</b></td>
-                    <td><span class="qty-tag ${isLow}">${item.qty}</span></td>
-                    <td>${item.batch}</td>
-                    <td style="color:var(--text-dim); font-size:13px;">${item.date1}${alert1}<br>${item.date2}${alert2}</td>`;
-            }
-            tbody.appendChild(tr);
-        });
+        if (pageItems.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:50px; color:var(--text-dim);">查無資料</td></tr>';
+        } else {
+            pageItems.forEach(item => {
+                const tr = document.createElement('tr');
+                const isLow = item.qty < 20 ? 'low-stock' : '';
+                
+                if (currentTab === 'frozen') {
+                    const alert = checkExpiry(item.date);
+                    tr.innerHTML = `<td><b>${item.name}</b></td><td><span class="qty-tag ${isLow}">${item.qty}</span></td><td>${item.batch}</td><td style="color:var(--text-dim); font-size:13px;">${item.date}${alert}</td>`;
+                } else {
+                    const alert1 = checkExpiry(item.date1);
+                    const alert2 = checkExpiry(item.date2);
+                    tr.innerHTML = `<td><b>${item.name}</b></td><td><span class="qty-tag ${isLow}">${item.qty}</span></td><td>${item.batch}</td><td style="color:var(--text-dim); font-size:13px;">${item.date1}${alert1}<br>${item.date2}${alert2}</td>`;
+                }
+                tbody.appendChild(tr);
+            });
+        }
         const maxPage = Math.ceil(filteredData.length / ROWS_PER_PAGE) || 1;
         document.getElementById('pageInfo').innerText = `第 ${currentPage} / ${maxPage} 頁`;
         document.getElementById('prevBtn').disabled = (currentPage === 1);
@@ -202,7 +190,7 @@
 
     function changePage(step) { currentPage += step; renderTable(); window.scrollTo(0, 0); }
 
-    window.onload = () => { fetchCSV('frozen'); fetchCSV('chilled'); };
+    window.onload = () => { fetchCSV('frozen'); };
 </script>
 </body>
 </html>
