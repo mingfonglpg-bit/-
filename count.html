@@ -6,9 +6,20 @@
     <title>3月庫存查詢系統</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
-        :root { --primary: #2c3e50; --accent: #3498db; --bg: #f4f7f6; }
+        :root { --primary: #2c3e50; --accent: #3498db; --bg: #f4f7f6; --dark-btn: #1e293b; }
         body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 10px; }
         .container { max-width: 800px; margin: auto; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        
+        /* --- 新增：返回按鈕樣式 --- */
+        .nav-header { margin-bottom: 15px; }
+        .btn-back { 
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 20px; background: var(--dark-btn); color: white; 
+            text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;
+            border: 1px solid rgba(255,255,255,0.1); transition: 0.2s;
+        }
+        .btn-back:hover { background: #334155; }
+
         .tabs { display: flex; gap: 8px; margin-bottom: 15px; }
         .tab-btn { flex: 1; padding: 12px; border: none; background: #eee; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 14px; }
         .tab-btn.active { background: var(--accent); color: white; }
@@ -28,6 +39,10 @@
 <body>
 
 <div class="container">
+    <div class="nav-header">
+        <a href="https://mingfonglpg-bit.github.io/-1-1/android.html" class="btn-back">⬅️ 返回庫位控管頁面</a>
+    </div>
+
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('frozen', this)">❄️ 冷凍品</button>
         <button class="tab-btn" onclick="switchTab('chilled', this)">🌡️ 冷藏/常溫</button>
@@ -78,24 +93,22 @@
                     for (let i = 1; i < rows.length && i < 411; i++) {
                         const r = rows[i];
                         if (type === 'frozen') {
-                            // 冷凍：A+B+C 欄，抓 AL(37), AM(38), AN(39)
                             if (r[0] || r[1] || r[2]) {
                                 dataStore.frozen.push({
                                     name: `${r[0]||''} ${r[1]||''} ${r[2]||''}`.trim(),
-                                    col1: r[37] || "0", // 數量 (AL)
-                                    col2: r[38] || "-", // 批號 (AM)
-                                    col3: formatExcelDate(r[39]) // 日期 (AN)
+                                    col1: r[37] || "0",
+                                    col2: r[38] || "-",
+                                    col3: formatExcelDate(r[39])
                                 });
                             }
                         } else {
-                            // 冷藏/常溫：A+B 欄，抓 AG(32), AH(33), AI(34), AJ(35)
                             if (r[0] || r[1]) {
                                 dataStore.chilled.push({
                                     name: `${r[0]||''} ${r[1]||''}`.trim(),
-                                    col1: r[32] || "0", // 數量 (AG)
-                                    col2: r[33] || "-", // 批號/規格 (AH)
-                                    col3: r[34] || "-", // 效期1 (AI)
-                                    col4: r[35] || "-"  // 效期2 (AJ)
+                                    col1: r[32] || "0",
+                                    col2: r[33] || "-",
+                                    col3: r[34] || "-",
+                                    col4: r[35] || "-"
                                 });
                             }
                         }
@@ -148,7 +161,6 @@
     function renderTable() {
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
-
         const start = (currentPage - 1) * ROWS_PER_PAGE;
         const end = start + ROWS_PER_PAGE;
         const pageItems = filteredData.slice(start, end);
@@ -159,24 +171,13 @@
             pageItems.forEach(item => {
                 const tr = document.createElement('tr');
                 if (currentTab === 'frozen') {
-                    tr.innerHTML = `
-                        <td>${item.name}</td>
-                        <td><span class="qty-tag">${item.col1}</span></td>
-                        <td>${item.col2}</td>
-                        <td style="font-size:12px; color:#666;">${item.col3}</td>
-                    `;
+                    tr.innerHTML = `<td>${item.name}</td><td><span class="qty-tag">${item.col1}</span></td><td>${item.col2}</td><td style="font-size:12px; color:#666;">${item.col3}</td>`;
                 } else {
-                    tr.innerHTML = `
-                        <td>${item.name}</td>
-                        <td><span class="qty-tag">${item.col1}</span></td>
-                        <td>${item.col2}</td>
-                        <td style="font-size:12px; color:#666;">${item.col3}<br>${item.col4}</td>
-                    `;
+                    tr.innerHTML = `<td>${item.name}</td><td><span class="qty-tag">${item.col1}</span></td><td>${item.col2}</td><td style="font-size:12px; color:#666;">${item.col3}<br>${item.col4}</td>`;
                 }
                 tbody.appendChild(tr);
             });
         }
-
         const maxPage = Math.ceil(filteredData.length / ROWS_PER_PAGE) || 1;
         document.getElementById('pageInfo').innerText = `第 ${currentPage} / ${maxPage} 頁`;
         document.getElementById('prevBtn').disabled = (currentPage === 1);
