@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ 倉儲庫位控管系統 V18.3 Pro - 完整版</title>
+    <style>
+        /* --- 基礎樣式 --- */
+        :root { 
+            --primary: #6366f1; --warning: #f59e0b; --danger: #ef4444; --edit: #10b981;
+            --bg: #0f172a; --card-bg: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc; --text-dim: #94a3b8; --border: rgba(255, 255, 255, 0.1);
+            --select-bg: #1e293b; --select-text: #c7d2fe;
+            --color-polar-l: #38bdf8; --color-polar-r: #818cf8;
+            --color-cool-l: #fbbf24; --color-cool-r: #fb7185;
+            --color-normal: #34d399; --color-cut: #a855f7;
+        }
+        * { box-sizing: border-box; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        body { font-family: 'Inter', "Noto Sans TC", sans-serif; background: var(--bg); color: var(--text-main); margin: 0; line-height: 1.5; overflow-x: hidden; }
+        
+        .container { width: 95%; max-width: 1400px; margin: 20px auto; background: var(--card-bg); backdrop-filter: blur(20px); padding: 25px; border-radius: 28px; border: 1px solid var(--border); display: none; animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        select.btn, input.btn { background: var(--select-bg) !important; color: var(--select-text) !important; border: 1px solid var(--border); padding: 12px; border-radius: 12px; outline: none; width: 100%; font-size: 14px; }
+        
+        .usage-badge { background: rgba(99, 102, 241, 0.15); color: var(--primary); padding: 8px 16px; border-radius: 12px; font-weight: bold; border: 1px solid rgba(99, 102, 241, 0.2); font-size: 13px; }
+        
+        .slot { aspect-ratio: 1; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; position: relative; }
+        .slot:hover { transform: scale(1.05); z-index: 10; border-color: white; }
+        .slot b { font-size: 14px; }
+        .slot.occupied { color: white; box-shadow: inset 0 0 10px rgba(0,0,0,0.2); }
+        .slot.status-warning { background: var(--warning) !important; color: #000; }
+        .slot.status-danger { background: var(--danger) !important; color: white; }
+        .slot.status-cut { background: var(--color-cut) !important; color: white; font-weight: bold; }
+
+        table { width: 100%; border-collapse: separate; border-spacing: 0 10px; margin-top: 15px; }
+        th { color: var(--text-dim); padding: 15px 20px; text-align: left; font-size: 13px; font-weight: 500; }
+        td { padding: 18px 20px; background: rgba(255, 255, 255, 0.03); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        td:first-child { border-left: 1px solid var(--border); border-radius: 15px 0 0 15px; }
+        td:last-child { border-right: 1px solid var(--border); border-radius: 0 15px 15px 0; }
+        
+        .search-wrapper { position: relative; margin: 25px 0 15px 0; }
+        .btn-main { padding: 10px 20px; border-radius: 12px; border: none; background: var(--primary); color: white; cursor: pointer; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-main:active { transform: scale(0.95); }
+
+        .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:11000; justify-content:center; align-items:center; backdrop-filter: blur(5px); }
+        .modal-content { background:var(--select-bg); padding:30px; border-radius:28px; width:90%; max-width:480px; border:1px solid var(--primary); }
+        #loader { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:12000; justify-content:center; align-items:center; color:white; flex-direction: column; gap: 10px; }
+        
+        @media screen and (max-width: 768px) {
+            thead { display: none; }
+            tr { display: block; margin-bottom: 15px; border: 1px solid var(--border); border-radius: 15px; }
+            td { display: flex; justify-content: space-between; align-items: center; text-align: right; border: none !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; }
+            td::before { content: attr(data-label); color: var(--text-dim); font-size: 12px; }
+            header { flex-direction: column; gap: 15px; align-items: flex-start !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="loader">
+    <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+    <span>正在同步資料...</span>
+</div>
+
+<div id="welcome-page" style="height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align: center; padding: 20px;">
+    <h1 style="letter-spacing: 4px; font-size: 2.2rem; margin-bottom: 15px;">倉儲庫位控管系統 <span style="color:var(--primary)">V18.3</span></h1>
+    <button class="btn-main" style="padding: 20px 80px; border-radius:50px; font-size: 1.1rem;" onclick="enterSystem()">啟動系統</button>
+</div>
+
+<div class="container" id="main-container">
+    <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+        <h2 style="margin:0; font-size: 1.5rem;">📦 庫位主控台</h2>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
+            <button onclick="window.location.href='count.html'" class="btn-main" style="background:rgba(56,189,248,0.1); color:#38bdf8; border:1px solid rgba(56,189,248,0.3);">🔍 查詢庫存量</button>
+            <div id="usageInfo" class="usage-badge">使用率: --%</div>
+            <button onclick="fetchData()" class="btn-main" style="background:#334155;">🔄 刷新</button>
+            <button id="adminBtn" onclick="toggleAdmin()" class="btn-main" style="background:rgba(167,139,250,0.1); color:#a78bfa; border:1px solid rgba(167,139,250,0.3);">🛠️ 管理員</button>
+        </div>
+    </header>
+
+    <div id="admin-panel" style="display:none; background:rgba(99,102,241,0.05); padding:20px; border-radius:24px; border:2px solid var(--primary); margin-bottom:25px;">
+        <div style="margin-bottom:10px; font-weight:bold; color:var(--primary); font-size:13px;">快速入庫系統</div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px;">
+            <select id="addZone" class="btn"><option value="極冷庫-左">極冷庫-左</option><option value="極冷庫-右">極冷庫-右</option><option value="冷藏庫-左">冷藏庫-左</option><option value="冷藏庫-右">冷藏庫-右</option><option value="常溫區">常溫區</option></select>
+            <select id="addFloor" class="btn"><option value="1F">1F</option><option value="2F">2F</option><option value="3F">3F</option><option value="4F">4F</option></select>
+            <input type="number" id="addPos" placeholder="儲位" class="btn">
+            <input type="text" id="addName" placeholder="產品名稱" class="btn">
+            <input type="text" id="addBatch" placeholder="批號" class="btn">
+            <input type="date" id="addDate" class="btn">
+            <button id="btnAdd" onclick="commitAdd()" class="btn-main" style="justify-content:center;">➕ 確認入庫</button>
+        </div>
+    </div>
+
+    <section style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 24px; border: 1px solid var(--border);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <b id="mapTitle" style="color:var(--primary);">載入中...</b>
+            <div style="display:flex; gap:8px;">
+                <select id="vZone" onchange="renderVisual()" class="btn" style="width:130px;"><option value="極冷庫-左">極冷庫-左</option><option value="極冷庫-右">極冷庫-右</option><option value="冷藏庫-左">冷藏庫-左</option><option value="冷藏庫-右">冷藏庫-右</option><option value="常溫區">常溫區</option></select>
+                <select id="vFloor" onchange="renderVisual()" class="btn" style="width:85px;"><option value="1F">1F</option><option value="2F">2F</option><option value="3F">3F</option><option value="4F">4F</option></select>
+            </div>
+        </div>
+        <div id="visualGrid" style="display:grid; gap:10px;"></div>
+    </section>
+
+    <div class="search-wrapper">
+        <input type="text" id="searchInput" class="btn" style="height: 55px; padding-left: 50px;" placeholder="搜尋儲位、品名、批號..." oninput="debouncedSearch()">
+        <span style="position:absolute; left:18px; top:50%; transform:translateY(-50%); opacity:0.5;">🔍</span>
+    </div>
+
+    <div style="overflow-x:auto;">
+        <table>
+            <thead><tr><th>儲位</th><th>產品內容</th><th>有效日期</th><th>批號碼</th><th>狀態</th><th>操作</th></tr></thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+    <div id="paginationCtrl" style="display:flex; justify-content:center; gap:15px; margin-top:20px;"></div>
+</div>
+
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top:0;">📝 編輯儲位資料</h3>
+        <input type="hidden" id="editId">
+        <input type="text" id="editName" class="btn" style="margin-bottom:10px;" placeholder="品名">
+        <input type="text" id="editBatch" class="btn" style="margin-bottom:10px;" placeholder="批號">
+        <input type="date" id="editDate" class="btn" style="margin-bottom:20px;">
+        <div style="display:flex; gap:10px;">
+            <button class="btn-main" style="background:#475569; flex:1;" onclick="closeModal('editModal')">取消</button>
+            <button class="btn-main" style="flex:1;" onclick="submitEdit()">儲存</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGRptsGHH3MLrl4eU0UsCQ4lvxGE5goP3VF_FntVevNrG31h8VtXhjoYSpO56IYA_T/exec"; 
+    const _KEY = "YWRtaW4xMjM="; 
+    let inventory = [], zoneConfigs = {}, isAdmin = false;
+    let currentPage = 1, rowsPerPage = 12, isSubmitting = false;
+
+    function enterSystem() { 
+        document.getElementById('welcome-page').style.display='none'; 
+        document.getElementById('main-container').style.display='block'; 
+        fetchData(); 
+    }
+
+    async function fetchData() {
+        toggleLoader(true);
+        try {
+            const res = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
+            const data = await res.json();
+            inventory = data.inventory;
+            zoneConfigs = data.configs;
+            renderAll();
+        } catch (e) { alert("讀取失敗"); }
+        finally { toggleLoader(false); }
+    }
+
+    function renderAll() { renderVisual(); renderTable(); }
+
+    function renderVisual() {
+        const grid = document.getElementById('visualGrid');
+        const zone = document.getElementById('vZone').value;
+        const floor = document.getElementById('vFloor').value;
+        const config = zoneConfigs[zone] || { maxPos: 22, cols: 11 };
+        
+        document.getElementById('mapTitle').innerText = `${zone} - ${floor}`;
+        grid.style.gridTemplateColumns = `repeat(${config.cols}, 1fr)`;
+        grid.innerHTML = '';
+
+        for (let i = 1; i <= config.maxPos; i++) {
+            const items = inventory.filter(d => d.zone === zone && d.floor === floor && d.pos == i);
+            const slot = document.createElement('div');
+            slot.className = 'slot';
+            if (items.length > 0) {
+                slot.classList.add('occupied');
+                slot.style.background = items.some(i => (i.name||'').includes('(切)')) ? 'var(--color-cut)' : 'var(--primary)';
+            }
+            slot.innerHTML = `<b>${i}</b>`;
+            slot.onclick = () => {
+                document.getElementById('searchInput').value = `${zone}${floor}-${i}`;
+                debouncedSearch();
+                if(isAdmin) {
+                    document.getElementById('addZone').value = zone;
+                    document.getElementById('addFloor').value = floor;
+                    document.getElementById('addPos').value = i;
+                }
+            };
+            grid.appendChild(slot);
+        }
+    }
+
+    function renderTable() {
+        const kw = document.getElementById('searchInput').value.toLowerCase();
+        const filtered = inventory.filter(i => `${i.zone}${i.floor}-${i.pos} ${i.name} ${i.batch}`.toLowerCase().includes(kw));
+        
+        const start = (currentPage - 1) * rowsPerPage;
+        const paged = filtered.slice(start, start + rowsPerPage);
+        
+        document.getElementById('tableBody').innerHTML = paged.map(i => `
+            <tr>
+                <td data-label="儲位"><b>${i.floor}-${i.pos}</b></td>
+                <td data-label="產品"><b>${i.name}</b></td>
+                <td data-label="日期">${i.date ? i.date.split('T')[0] : '-'}</td>
+                <td data-label="批號">${i.batch || '-'}</td>
+                <td data-label="狀態">${i.note || '正常'}</td>
+                <td data-label="操作">
+                    <button class="btn-main" style="padding:5px 10px; font-size:12px;" onclick="openEdit('${i.id}')">編輯</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    let timer;
+    function debouncedSearch() {
+        clearTimeout(timer);
+        timer = setTimeout(() => { currentPage = 1; renderTable(); }, 300);
+    }
+
+    function toggleAdmin() {
+        if(!isAdmin) {
+            const p = prompt("金鑰:");
+            if(p && btoa(p) === _KEY) {
+                isAdmin = true;
+                document.getElementById('admin-panel').style.display='block';
+                document.getElementById('adminBtn').innerText = "🔐 管理中";
+            }
+        } else {
+            isAdmin = false;
+            document.getElementById('admin-panel').style.display='none';
+            document.getElementById('adminBtn').innerText = "🛠️ 管理員";
+        }
+        renderTable();
+    }
+
+    async function commitAdd() {
+        if(isSubmitting) return;
+        const name = document.getElementById('addName').value;
+        if(!name) return alert("請輸入品名");
+        isSubmitting = true;
+        toggleLoader(true);
+        await fetch(SCRIPT_URL, { method:'POST', body:JSON.stringify({
+            action:"add",
+            zone: document.getElementById('addZone').value,
+            floor: document.getElementById('addFloor').value,
+            pos: document.getElementById('addPos').value,
+            name: name,
+            batch: document.getElementById('addBatch').value,
+            date: document.getElementById('addDate').value
+        })});
+        isSubmitting = false;
+        fetchData();
+    }
+
+    function openEdit(id) {
+        const item = inventory.find(i => i.id == id);
+        document.getElementById('editId').value = id;
+        document.getElementById('editName').value = item.name;
+        document.getElementById('editBatch').value = item.batch;
+        document.getElementById('editDate').value = item.date ? item.date.split('T')[0] : '';
+        document.getElementById('editModal').style.display = 'flex';
+    }
+
+    async function submitEdit() {
+        toggleLoader(true);
+        await fetch(SCRIPT_URL, { method:'POST', body:JSON.stringify({
+            action:'edit',
+            id: document.getElementById('editId').value,
+            name: document.getElementById('editName').value,
+            batch: document.getElementById('editBatch').value,
+            date: document.getElementById('editDate').value
+        })});
+        closeModal('editModal');
+        fetchData();
+    }
+
+    function closeModal(id) { document.getElementById(id).style.display='none'; }
+    function toggleLoader(s) { document.getElementById('loader').style.display = s?'flex':'none'; }
+</script>
+</body>
+</html>
