@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>3月庫存查詢系統 - 欄位優化版</title>
+    <title>3月庫存查詢系統 - 欄位全效優化版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { 
@@ -66,7 +66,6 @@
     let currentTab = 'frozen';
     let currentPage = 1;
 
-    // 效期警示檢查
     function checkExpiry(dateStr) {
         if (!dateStr || dateStr === "-" || dateStr.trim() === "" || dateStr === "undefined") return "";
         const normalizedDate = dateStr.replace(/-/g, '/');
@@ -80,7 +79,6 @@
         return "";
     }
 
-    // Excel 序號轉日期格式
     function formatExcelDate(num) {
         if (!num || isNaN(num) || num < 1000) return num || "-";
         const date = new Date(Math.round((num - 25569) * 86400 * 1000));
@@ -101,26 +99,23 @@
 
                         if (type === 'frozen') {
                             if (r[1] || r[2]) {
-                                // --- 冷凍品欄位優化：L(11), M(12), N(13) ---
+                                // 冷凍品項：L(11), M(12), N(13)
                                 dataStore.frozen.push({
                                     name: `${r[1]||''} ${r[2]||''}`.trim(),
-                                    qty: parseFloat(r[11]) || 0, // L 欄
-                                    batch: r[12] || "-",         // M 欄
-                                    date: formatExcelDate(r[13]) // N 欄
+                                    qty: parseFloat(r[11]) || 0,
+                                    batch: r[12] || "-",
+                                    date: formatExcelDate(r[13])
                                 });
                             }
                         } else {
-                            // 冷藏/常溫品欄位邏輯 (維持 B, AG, AH, AI, AJ)
+                            // --- 優化部分：修正冷藏品欄位為 I(8), J(9), K(10) ---
                             let cName = (r[1] || "").trim();
-                            let cQty = r[32] ? parseFloat(r[32]) : 0;
-
                             if (cName !== "" && cName !== "undefined") {
                                 dataStore.chilled.push({
                                     name: cName,
-                                    qty: cQty,
-                                    batch: r[33] || "-",
-                                    date1: r[34] || "-",
-                                    date2: r[35] || "-"
+                                    qty: parseFloat(r[8]) || 0,  // I 欄
+                                    batch: r[9] || "-",         // J 欄
+                                    date: formatExcelDate(r[10]) // K 欄
                                 });
                             }
                         }
@@ -154,7 +149,7 @@
         if (currentTab === 'frozen') {
             header.innerHTML = '<th width="40%">冷凍品項</th><th width="15%">庫存量</th><th width="20%">批號</th><th width="25%">有效日期</th>';
         } else {
-            header.innerHTML = '<th width="40%">冷藏/常溫品項</th><th width="15%">庫存</th><th width="15%">批號</th><th width="30%">有效日期</th>';
+            header.innerHTML = '<th width="40%">冷藏/常溫品項</th><th width="15%">庫存量</th><th width="20%">批號</th><th width="25%">有效日期</th>';
         }
     }
 
@@ -170,15 +165,9 @@
             pageItems.forEach(item => {
                 const tr = document.createElement('tr');
                 const isLow = item.qty < 20 ? 'low-stock' : '';
+                const alert = checkExpiry(item.date);
                 
-                if (currentTab === 'frozen') {
-                    const alert = checkExpiry(item.date);
-                    tr.innerHTML = `<td><b>${item.name}</b></td><td><span class="qty-tag ${isLow}">${item.qty}</span></td><td>${item.batch}</td><td style="color:var(--text-dim); font-size:13px;">${item.date}${alert}</td>`;
-                } else {
-                    const alert1 = checkExpiry(item.date1);
-                    const alert2 = checkExpiry(item.date2);
-                    tr.innerHTML = `<td><b>${item.name}</b></td><td><span class="qty-tag ${isLow}">${item.qty}</span></td><td>${item.batch}</td><td style="color:var(--text-dim); font-size:13px;">${item.date1}${alert1}<br>${item.date2}${alert2}</td>`;
-                }
+                tr.innerHTML = `<td><b>${item.name}</b></td><td><span class="qty-tag ${isLow}">${item.qty}</span></td><td>${item.batch}</td><td style="color:var(--text-dim); font-size:13px;">${item.date}${alert}</td>`;
                 tbody.appendChild(tr);
             });
         }
