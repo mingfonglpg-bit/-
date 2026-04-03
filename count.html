@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>3月庫存查詢系統 - 欄位精準版</title>
+    <title>3月庫存查詢系統 - 欄位優化版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { 
@@ -44,7 +44,7 @@
         <button id="btn-chilled" class="tab-btn" onclick="switchTab('chilled', this)">🌡️ 冷藏/常溫</button>
     </div>
     <input type="text" id="searchInput" class="search-box" placeholder="搜尋品項或批號..." oninput="handleSearch()">
-    <div id="loader" style="text-align:center; padding:50px; color:var(--text-dim);">⌛ 正在讀取 AG 欄位庫存資料...</div>
+    <div id="loader" style="text-align:center; padding:50px; color:var(--text-dim);">⌛ 正在讀取資料...</div>
     <div class="table-container">
         <table id="resultTable" style="display:none;">
             <thead><tr id="tableHeader"></tr></thead>
@@ -66,6 +66,7 @@
     let currentTab = 'frozen';
     let currentPage = 1;
 
+    // 效期警示檢查
     function checkExpiry(dateStr) {
         if (!dateStr || dateStr === "-" || dateStr.trim() === "" || dateStr === "undefined") return "";
         const normalizedDate = dateStr.replace(/-/g, '/');
@@ -79,6 +80,7 @@
         return "";
     }
 
+    // Excel 序號轉日期格式
     function formatExcelDate(num) {
         if (!num || isNaN(num) || num < 1000) return num || "-";
         const date = new Date(Math.round((num - 25569) * 86400 * 1000));
@@ -99,25 +101,26 @@
 
                         if (type === 'frozen') {
                             if (r[1] || r[2]) {
+                                // --- 冷凍品欄位優化：L(11), M(12), N(13) ---
                                 dataStore.frozen.push({
                                     name: `${r[1]||''} ${r[2]||''}`.trim(),
                                     qty: parseFloat(r[11]) || 0, // L 欄
-                                    batch: r[38] || "-", 
-                                    date: formatExcelDate(r[39]) // AN 欄
+                                    batch: r[12] || "-",         // M 欄
+                                    date: formatExcelDate(r[13]) // N 欄
                                 });
                             }
                         } else {
-                            // 冷藏品邏輯修正
-                            let cName = (r[1] || "").trim(); // 品名在 B 欄 (Index 1)
-                            let cQty = r[32] ? parseFloat(r[32]) : 0; // 庫存量在 AG 欄 (Index 32)
+                            // 冷藏/常溫品欄位邏輯 (維持 B, AG, AH, AI, AJ)
+                            let cName = (r[1] || "").trim();
+                            let cQty = r[32] ? parseFloat(r[32]) : 0;
 
                             if (cName !== "" && cName !== "undefined") {
                                 dataStore.chilled.push({
                                     name: cName,
                                     qty: cQty,
-                                    batch: r[33] || "-", // AH 欄
-                                    date1: r[34] || "-", // AI 欄
-                                    date2: r[35] || "-"  // AJ 欄
+                                    batch: r[33] || "-",
+                                    date1: r[34] || "-",
+                                    date2: r[35] || "-"
                                 });
                             }
                         }
@@ -151,7 +154,7 @@
         if (currentTab === 'frozen') {
             header.innerHTML = '<th width="40%">冷凍品項</th><th width="15%">庫存量</th><th width="20%">批號</th><th width="25%">有效日期</th>';
         } else {
-            header.innerHTML = '<th width="40%">冷藏/常溫品項(B)</th><th width="15%">庫存(AG)</th><th width="15%">批號</th><th width="30%">有效日期</th>';
+            header.innerHTML = '<th width="40%">冷藏/常溫品項</th><th width="15%">庫存</th><th width="15%">批號</th><th width="30%">有效日期</th>';
         }
     }
 
@@ -162,7 +165,7 @@
         const pageItems = filteredData.slice(start, start + ROWS_PER_PAGE);
 
         if (pageItems.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:50px;">查無庫存數據</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:50px;">查無相關庫存資料</td></tr>';
         } else {
             pageItems.forEach(item => {
                 const tr = document.createElement('tr');
