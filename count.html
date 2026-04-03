@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>3月庫存查詢系統 - 欄位全效優化版</title>
+    <title>3月庫存查詢系統 - 進階優化版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { 
@@ -16,8 +16,12 @@
         * { box-sizing: border-box; }
         body { font-family: -apple-system, "Noto Sans TC", sans-serif; background-color: var(--bg); color: var(--text-main); margin: 0; padding: 12px; }
         .container { max-width: 900px; margin: auto; background: var(--card-bg); padding: 20px; border-radius: 20px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .nav-header { margin-bottom: 20px; }
-        .btn-back { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; color: var(--accent); text-decoration: none; border-radius: 12px; font-weight: bold; border: 2px solid var(--accent); }
+        
+        /* 導覽列與跑馬燈樣式 */
+        .nav-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; overflow: hidden; }
+        .btn-back { flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; color: var(--accent); text-decoration: none; border-radius: 12px; font-weight: bold; border: 2px solid var(--accent); white-space: nowrap; }
+        .marquee-container { flex-grow: 1; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 10px; color: var(--primary); font-weight: bold; overflow: hidden; }
+
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
         .tab-btn { flex: 1; padding: 14px; background: rgba(255,255,255,0.05); color: var(--text-dim); cursor: pointer; border-radius: 12px; font-weight: bold; border: 1px solid var(--border); }
         .tab-btn.active { background: var(--primary); color: #000; border: none; }
@@ -38,19 +42,29 @@
 <body>
 
 <div class="container">
-    <div class="nav-header"><a href="https://mingfonglpg-bit.github.io/-1-1/android.html" class="btn-back">⬅️ 返回庫位控管</a></div>
+    <div class="nav-header">
+        <a href="https://mingfonglpg-bit.github.io/-1-1/android.html" class="btn-back">⬅️ 返回</a>
+        <div class="marquee-container">
+            <marquee scrollamount="5">⚠️ 更新日期: 2026.04.02 — 系統自動隱藏零庫存品項</marquee>
+        </div>
+    </div>
+
     <div class="tabs">
         <button id="btn-frozen" class="tab-btn active" onclick="switchTab('frozen', this)">❄️ 冷凍品庫存</button>
         <button id="btn-chilled" class="tab-btn" onclick="switchTab('chilled', this)">🌡️ 冷藏/常溫</button>
     </div>
+
     <input type="text" id="searchInput" class="search-box" placeholder="搜尋品項或批號..." oninput="handleSearch()">
-    <div id="loader" style="text-align:center; padding:50px; color:var(--text-dim);">⌛ 正在讀取資料...</div>
+    
+    <div id="loader" style="text-align:center; padding:50px; color:var(--text-dim);">⌛ 正在同步雲端庫存資料...</div>
+
     <div class="table-container">
         <table id="resultTable" style="display:none;">
             <thead><tr id="tableHeader"></tr></thead>
             <tbody id="tableBody"></tbody>
         </table>
     </div>
+
     <div id="paginationCtrl" class="pagination" style="display:none;">
         <button id="prevBtn" class="page-btn" onclick="changePage(-1)">上一頁</button>
         <span id="pageInfo" style="color:var(--primary); font-weight:bold;">第 1 頁</span>
@@ -98,24 +112,26 @@
                         if (!r || r.length < 5) continue;
 
                         if (type === 'frozen') {
-                            if (r[1] || r[2]) {
-                                // 冷凍品項：L(11), M(12), N(13)
+                            const qty = parseFloat(r[11]) || 0;
+                            // --- 優化：隱藏庫存量為 0 的資料 ---
+                            if ((r[1] || r[2]) && qty > 0) {
                                 dataStore.frozen.push({
                                     name: `${r[1]||''} ${r[2]||''}`.trim(),
-                                    qty: parseFloat(r[11]) || 0,
+                                    qty: qty,
                                     batch: r[12] || "-",
                                     date: formatExcelDate(r[13])
                                 });
                             }
                         } else {
-                            // --- 優化部分：修正冷藏品欄位為 I(8), J(9), K(10) ---
-                            let cName = (r[1] || "").trim();
-                            if (cName !== "" && cName !== "undefined") {
+                            const qty = parseFloat(r[8]) || 0;
+                            const cName = (r[1] || "").trim();
+                            // --- 優化：隱藏庫存量為 0 的資料 ---
+                            if (cName !== "" && cName !== "undefined" && qty > 0) {
                                 dataStore.chilled.push({
                                     name: cName,
-                                    qty: parseFloat(r[8]) || 0,  // I 欄
-                                    batch: r[9] || "-",         // J 欄
-                                    date: formatExcelDate(r[10]) // K 欄
+                                    qty: qty,
+                                    batch: r[9] || "-",
+                                    date: formatExcelDate(r[10])
                                 });
                             }
                         }
@@ -146,11 +162,7 @@
 
     function updateHeader() {
         const header = document.getElementById('tableHeader');
-        if (currentTab === 'frozen') {
-            header.innerHTML = '<th width="40%">冷凍品項</th><th width="15%">庫存量</th><th width="20%">批號</th><th width="25%">有效日期</th>';
-        } else {
-            header.innerHTML = '<th width="40%">冷藏/常溫品項</th><th width="15%">庫存量</th><th width="20%">批號</th><th width="25%">有效日期</th>';
-        }
+        header.innerHTML = `<th width="40%">${currentTab==='frozen'?'冷凍':'冷藏/常溫'}品項</th><th width="15%">庫存量</th><th width="20%">批號</th><th width="25%">有效日期</th>`;
     }
 
     function renderTable() {
@@ -160,13 +172,12 @@
         const pageItems = filteredData.slice(start, start + ROWS_PER_PAGE);
 
         if (pageItems.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:50px;">查無相關庫存資料</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:50px;">目前無庫存品項</td></tr>';
         } else {
             pageItems.forEach(item => {
                 const tr = document.createElement('tr');
                 const isLow = item.qty < 20 ? 'low-stock' : '';
                 const alert = checkExpiry(item.date);
-                
                 tr.innerHTML = `<td><b>${item.name}</b></td><td><span class="qty-tag ${isLow}">${item.qty}</span></td><td>${item.batch}</td><td style="color:var(--text-dim); font-size:13px;">${item.date}${alert}</td>`;
                 tbody.appendChild(tr);
             });
