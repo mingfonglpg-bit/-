@@ -101,7 +101,7 @@
                             if (r[1] || r[2]) {
                                 dataStore.frozen.push({
                                     name: `${r[1]||''} ${r[2]||''}`.trim(),
-                                    qty: parseFloat(r[37]) || 0, // AL 欄
+                                    qty: parseFloat(r[11]) || 0, // L 欄
                                     batch: r[38] || "-", 
                                     date: formatExcelDate(r[39]) // AN 欄
                                 });
