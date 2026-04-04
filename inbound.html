@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" class="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>入庫管理 - 倉儲管理系統</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1" rel="stylesheet">
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#005dac",
+                        "on-primary": "#ffffff",
+                        "primary-container": "#d4e3ff",
+                        "on-primary-container": "#001c3a",
+                        "surface": "#f8f9ff",
+                        "on-surface": "#071e27",
+                        "surface-container-low": "#f0f4fa",
+                        "surface-container-high": "#e1eaf5",
+                        "secondary-industrial": "#964900",
+                        "tertiary-efficiency": "#0d6c1e"
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #f8f9ff;
+            color: #071e27;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        /* 隱藏滾動條但保持功能 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* 輸入框聚焦效果 */
+        .input-focus-effect:focus-within {
+            box-shadow: 0 0 0 4px rgba(0, 93, 172, 0.15);
+        }
+    </style>
+</head>
+<body class="pb-32 font-sans">
+
+    <header class="sticky top-0 z-50 glass-effect px-6 py-4 flex justify-between items-center transition-all">
+        <div class="flex items-center gap-3">
+            <a href="code.html" class="material-symbols-outlined text-on-surface-variant">arrow_back</a>
+            <div>
+                <h1 class="text-xs font-bold tracking-widest text-primary uppercase font-display">Inbound Process</h1>
+                <p class="text-xl font-extrabold font-display">貨物入庫作業</p>
+            </div>
+        </div>
+        <button class="w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-high text-on-surface active:scale-90 transition-transform">
+            <span class="material-symbols-outlined">qr_code_scanner</span>
+        </button>
+    </header>
+
+    <main class="px-6 mt-6 space-y-6">
+        
+        <section class="space-y-4">
+            <div class="space-y-1">
+                <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant ml-2">SKU 編號 / 條碼</label>
+                <div class="input-focus-effect flex items-center bg-surface-container-high rounded-2xl px-4 py-3">
+                    <span class="material-symbols-outlined text-on-surface-variant mr-3">barcode_scanner</span>
+                    <input type="text" placeholder="輸入或掃描貨號" class="bg-transparent border-none focus:ring-0 w-full font-display font-bold text-lg placeholder:text-on-surface-variant/30">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant ml-2">數量</label>
+                    <div class="input-focus-effect flex items-center bg-surface-container-high rounded-2xl px-4 py-3">
+                        <input type="number" placeholder="0" class="bg-transparent border-none focus:ring-0 w-full font-display font-bold text-lg text-center">
+                    </div>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant ml-2">入庫儲位</label>
+                    <div class="input-focus-effect flex items-center bg-surface-container-high rounded-2xl px-4 py-3">
+                        <select class="bg-transparent border-none focus:ring-0 w-full font-bold text-sm">
+                            <option>冷藏 A-01</option>
+                            <option>冷藏 A-02</option>
+                            <option>常溫 B-05</option>
+                            <option>極冷 C-03</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant ml-2">有效日期 (選填)</label>
+                <div class="input-focus-effect flex items-center bg-surface-container-high rounded-2xl px-4 py-3">
+                    <span class="material-symbols-outlined text-on-surface-variant mr-3">calendar_today</span>
+                    <input type="date" class="bg-transparent border-none focus:ring-0 w-full font-medium">
+                </div>
+            </div>
+        </section>
+
+        <section class="pt-2">
+            <button class="w-full py-5 bg-gradient-to-r from-primary to-[#1976d2] text-white rounded-2xl font-bold font-display shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform flex justify-center items-center gap-2">
+                <span class="material-symbols-outlined">add_task</span>
+                確認入庫提交
+            </button>
+        </section>
+
+        <section>
+            <div class="flex justify-between items-end mb-4 px-2">
+                <h2 class="text-sm font-bold font-display tracking-wide">待入庫暫存區</h2>
+                <span class="text-[10px] font-medium bg-surface-container-high px-2 py-0.5 rounded-full">3 筆待處理</span>
+            </div>
+            
+            <div class="space-y-3">
+                <div class="bg-white p-4 rounded-[1.5rem] shadow-sm border-l-4 border-tertiary-efficiency flex justify-between items-center">
+                    <div>
+                        <p class="font-display font-extrabold text-sm tracking-tight text-on-surface">SKU-2024-XP90</p>
+                        <p class="text-[10px] text-on-surface-variant mt-0.5 font-medium">冷藏 A-12 · 效期: 2026-12-01</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-display font-black text-lg text-tertiary-efficiency">+240</p>
+                        <p class="text-[8px] font-bold uppercase tracking-tighter opacity-40">Units</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-[1.5rem] shadow-sm border-l-4 border-primary flex justify-between items-center">
+                    <div>
+                        <p class="font-display font-extrabold text-sm tracking-tight text-on-surface">SKU-1188-WT02</p>
+                        <p class="text-[10px] text-on-surface-variant mt-0.5 font-medium">常溫 B-02 · 無標註效期</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-display font-black text-lg text-primary">+15</p>
+                        <p class="text-[8px] font-bold uppercase tracking-tighter opacity-40">Pallets</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <nav class="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center px-4 pb-8 pt-4 bg-white/80 backdrop-blur-xl shadow-[0_-12px_32px_rgba(7,30,39,0.08)] rounded-t-3xl border-t border-surface-container-low">
+        
+        <a href="code.html" class="flex flex-col items-center justify-center text-on-surface-variant/60 hover:text-primary transition-colors duration-200 px-3">
+            <span class="material-symbols-outlined">dashboard</span>
+            <span class="text-[10px] font-medium mt-0.5">儀表板</span>
+        </a>
+
+        <a href="inventory.html" class="flex flex-col items-center justify-center text-on-surface-variant/60 hover:text-primary transition-colors duration-200 px-3">
+            <span class="material-symbols-outlined">inventory_2</span>
+            <span class="text-[10px] font-medium mt-0.5">庫存</span>
+        </a>
+
+        <a href="inbound.html" class="flex flex-col items-center justify-center bg-primary-container text-primary rounded-2xl px-5 py-1.5 transition-all duration-300">
+            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">input</span>
+            <span class="text-[10px] font-bold mt-0.5">入庫</span>
+        </a>
+
+        <a href="outbound.html" class="flex flex-col items-center justify-center text-on-surface-variant/60 hover:text-primary transition-colors duration-200 px-3">
+            <span class="material-symbols-outlined">output</span>
+            <span class="text-[10px] font-medium mt-0.5">出庫</span>
+        </a>
+
+        <a href="profile.html" class="flex flex-col items-center justify-center text-on-surface-variant/60 hover:text-primary transition-colors duration-200 px-3">
+            <span class="material-symbols-outlined">person</span>
+            <span class="text-[10px] font-medium mt-0.5">個人</span>
+        </a>
+
+    </nav>
+
+</body>
+</html>
