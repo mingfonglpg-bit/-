@@ -32,18 +32,25 @@
         .page-btn { background: #475569; border: none; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; }
         .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         .loading-msg { text-align: center; padding: 50px; color: var(--text-dim); }
+
+        /*  已過期整列變色與刪除線樣式 */
+        .expired-row {
+            background-color: rgba(255, 68, 68, 0.2) !important; /* 深紅色背景 */
+            text-decoration: line-through; /* 文字刪除線 */
+            color: var(--text-dim);
+        }
     </style>
 </head>
 <body>
 
 <div class="marquee-container">
-    <marquee scrollamount="5">🚀 庫存資料已於 2026.04.16 更新。</marquee>
+    <marquee scrollamount="5">🚀 庫存資料已於 2026.04.13 完成更新。領貨請務必核對批號效期。</marquee>
 </div>
 
 <div class="container">
     <div class="header">
         <h2>❄️ 庫存查詢系統</h2>
-        <div id="updateTime" style="font-size: 12px; color: var(--text-dim);">最後更新: 26.04.16</div>
+        <div id="updateTime" style="font-size: 12px; color: var(--text-dim);">最後更新: 26.04.13</div>
     </div>
 
     <div class="tabs">
@@ -85,17 +92,17 @@
     const CONFIG = {
         frozen: {
             fileName: "frozen.csv",
-            idx_name: 2,   // C 欄 (品名)
-            idx_qty: 25,  // Z 欄 (庫存量)
-            idx_batch: 26, // AA 欄 (批號)
-            idx_date: 27   // AB 欄 (有效日期)
+            idx_name: 2,   // C 欄
+            idx_qty: 25,  // Z 欄
+            idx_batch: 26, // AA 欄
+            idx_date: 27   // AB 欄
         },
         chilled: {
             fileName: "chilled.csv",
-            idx_name: 1,   // B 欄 (品名)
-            idx_qty: 17,  // R欄 (庫存量)
-            idx_batch: 18, // S 欄 (批號)
-            idx_date: 19   // T 欄 (有效日期)
+            idx_name: 1,   // B 欄
+            idx_qty: 17,  // R 欄
+            idx_batch: 18, // S 欄
+            idx_date: 19   // T 欄
         }
     };
 
@@ -141,7 +148,7 @@
     }
 
     /**
-     * 渲染表格邏輯 - 包含到期提醒顏色判斷 [cite: 1]
+     *  渲染表格邏輯 - 包含到期提醒、整列變色與刪除線
      */
     function renderTable() {
         const tbody = document.getElementById('inventoryBody');
@@ -152,27 +159,28 @@
             tbody.innerHTML = `<tr><td colspan="4" class="loading-msg">🔍 沒有符合搜尋條件的資料</td></tr>`;
         } else {
             const today = new Date();
-            const warningLimit = 31 * 24 * 60 * 60 * 1000; // 31天毫秒數 [cite: 1]
+            const warningLimit = 31 * 24 * 60 * 60 * 1000; // 31天 
 
             tbody.innerHTML = pageData.map(item => {
-                let dateStyle = 'color: var(--text-dim);'; // 預設顏色 [cite: 1]
+                let dateStyle = 'color: var(--text-dim);'; 
+                let rowClass = ''; 
 
-                // 日期比對邏輯 [cite: 1]
                 if (item.date && item.date !== '-') {
                     const expiryDate = new Date(item.date);
                     const diff = expiryDate - today;
                     
                     if (diff <= 0) {
-                        // 已過期：亮紅色 (#ff4444) [cite: 1]
+                        //  已過期：文字變色、整列背景變色、加刪除線
                         dateStyle = 'color: #ff4444; font-weight: bold;';
+                        rowClass = 'class="expired-row"';
                     } else if (diff <= warningLimit) {
-                        // 一個月內到期：橘黃色 (#ffae00) [cite: 1]
+                        //  一個月內到期：橘黃色提醒
                         dateStyle = 'color: #ffae00; font-weight: bold;';
                     }
                 }
 
                 return `
-                <tr>
+                <tr ${rowClass}>
                     <td>${item.name}</td>
                     <td><span class="qty-tag ${item.qty <= 5 ? 'low-stock' : ''}">${item.qty}</span></td>
                     <td style="font-family: monospace;">${item.batch}</td>
