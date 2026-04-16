@@ -33,10 +33,10 @@
         .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         .loading-msg { text-align: center; padding: 50px; color: var(--text-dim); }
 
-        /*  已過期整列變色與刪除線樣式 */
+        /* [cite: 3] 已過期商品：整列變色與文字刪除線樣式 */
         .expired-row {
-            background-color: rgba(255, 68, 68, 0.2) !important; /* 深紅色背景 */
-            text-decoration: line-through; /* 文字刪除線 */
+            background-color: rgba(255, 68, 68, 0.2) !important; /* [cite: 3] 深紅色背景 */
+            text-decoration: line-through; /* [cite: 3] 文字刪除線 */
             color: var(--text-dim);
         }
     </style>
@@ -84,25 +84,20 @@
 </div>
 
 <script>
-    /**
-     * ==========================================
-     * 庫位控管系統 - 資料定義註記區
-     * ==========================================
-     */
     const CONFIG = {
         frozen: {
             fileName: "frozen.csv",
-            idx_name: 2,   // C 欄
-            idx_qty: 25,  // Z 欄
-            idx_batch: 26, // AA 欄
-            idx_date: 27   // AB 欄
+            idx_name: 2,
+            idx_qty: 25,
+            idx_batch: 26,
+            idx_date: 27
         },
         chilled: {
             fileName: "chilled.csv",
-            idx_name: 1,   // B 欄
-            idx_qty: 17,  // R 欄
-            idx_batch: 18, // S 欄
-            idx_date: 19   // T 欄
+            idx_name: 1,
+            idx_qty: 17,
+            idx_batch: 18,
+            idx_date: 19
         }
     };
 
@@ -148,7 +143,7 @@
     }
 
     /**
-     *  渲染表格邏輯 - 包含到期提醒、整列變色與刪除線
+     *  渲染表格邏輯：包含到期提醒、過期標色與刪除線
      */
     function renderTable() {
         const tbody = document.getElementById('inventoryBody');
@@ -159,7 +154,7 @@
             tbody.innerHTML = `<tr><td colspan="4" class="loading-msg">🔍 沒有符合搜尋條件的資料</td></tr>`;
         } else {
             const today = new Date();
-            const warningLimit = 31 * 24 * 60 * 60 * 1000; // 31天 
+            const warningLimit = 31 * 24 * 60 * 60 * 1000; // [cite: 1] 31天
 
             tbody.innerHTML = pageData.map(item => {
                 let dateStyle = 'color: var(--text-dim);'; 
@@ -170,11 +165,11 @@
                     const diff = expiryDate - today;
                     
                     if (diff <= 0) {
-                        //  已過期：文字變色、整列背景變色、加刪除線
+                        //  已過期：有效日期文字顯示紅色、整列變色並增加刪除線
                         dateStyle = 'color: #ff4444; font-weight: bold;';
                         rowClass = 'class="expired-row"';
                     } else if (diff <= warningLimit) {
-                        //  一個月內到期：橘黃色提醒
+                        // [cite: 1] 一個月內到期：文字變更為橘黃色 (#ffae00)
                         dateStyle = 'color: #ffae00; font-weight: bold;';
                     }
                 }
