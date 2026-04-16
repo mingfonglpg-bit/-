@@ -37,13 +37,13 @@
 <body>
 
 <div class="marquee-container">
-    <marquee scrollamount="5">🚀 庫存資料已於 2026.04.13 完成更新。領貨請務必核對批號效期。</marquee>
+    <marquee scrollamount="5">🚀 庫存資料已於 2026.04.16 更新。</marquee>
 </div>
 
 <div class="container">
     <div class="header">
         <h2>❄️ 庫存查詢系統</h2>
-        <div id="updateTime" style="font-size: 12px; color: var(--text-dim);">最後更新: 26.04.13</div>
+        <div id="updateTime" style="font-size: 12px; color: var(--text-dim);">最後更新: 26.04.16</div>
     </div>
 
     <div class="tabs">
@@ -80,7 +80,6 @@
     /**
      * ==========================================
      * 庫位控管系統 - 資料定義註記區
-     * 維護人員請注意：JavaScript 索引由 0 開始計算 (A=0, B=1, C=2...)
      * ==========================================
      */
     const CONFIG = {
@@ -99,32 +98,28 @@
             idx_date: 19   // T 欄 (有效日期)
         }
     };
-    // ==========================================
 
-    let currentAllData = []; // 結構化後的資料
+    let currentAllData = []; 
     let currentFilteredData = []; 
     let currentPage = 1;
     let currentTab = 'frozen';
     const ROWS_PER_PAGE = 12;
 
-    // 初始載入
     loadCSVData();
 
     function loadCSVData() {
         const settings = CONFIG[currentTab];
-        
         Papa.parse(settings.fileName, {
             download: true,
             header: false,
             skipEmptyLines: true,
             complete: function(results) {
-                // 資料轉換
                 currentAllData = results.data.slice(1).map(row => ({
                     name: row[settings.idx_name] || '',
                     qty: parseFloat(row[settings.idx_qty]) || 0,
                     batch: row[settings.idx_batch] || '-',
                     date: row[settings.idx_date] || '-'
-                })).filter(item => item.name !== ''); // 排除空白列
+                })).filter(item => item.name !== '');
 
                 processSearchAndRender();
             },
@@ -137,17 +132,17 @@
 
     function processSearchAndRender() {
         const keyword = document.getElementById('searchInput').value.toLowerCase();
-        
-        // 過濾
         currentFilteredData = currentAllData.filter(item => 
             item.name.toLowerCase().includes(keyword) || 
             item.batch.toLowerCase().includes(keyword)
         );
-
         currentPage = 1;
         renderTable();
     }
 
+    /**
+     * 渲染表格邏輯 - 包含到期提醒顏色判斷 [cite: 1]
+     */
     function renderTable() {
         const tbody = document.getElementById('inventoryBody');
         const start = (currentPage - 1) * ROWS_PER_PAGE;
@@ -156,16 +151,36 @@
         if (pageData.length === 0) {
             tbody.innerHTML = `<tr><td colspan="4" class="loading-msg">🔍 沒有符合搜尋條件的資料</td></tr>`;
         } else {
-            tbody.innerHTML = pageData.map(item => `
+            const today = new Date();
+            const warningLimit = 31 * 24 * 60 * 60 * 1000; // 31天毫秒數 [cite: 1]
+
+            tbody.innerHTML = pageData.map(item => {
+                let dateStyle = 'color: var(--text-dim);'; // 預設顏色 [cite: 1]
+
+                // 日期比對邏輯 [cite: 1]
+                if (item.date && item.date !== '-') {
+                    const expiryDate = new Date(item.date);
+                    const diff = expiryDate - today;
+                    
+                    if (diff <= 0) {
+                        // 已過期：亮紅色 (#ff4444) [cite: 1]
+                        dateStyle = 'color: #ff4444; font-weight: bold;';
+                    } else if (diff <= warningLimit) {
+                        // 一個月內到期：橘黃色 (#ffae00) [cite: 1]
+                        dateStyle = 'color: #ffae00; font-weight: bold;';
+                    }
+                }
+
+                return `
                 <tr>
                     <td>${item.name}</td>
                     <td><span class="qty-tag ${item.qty <= 5 ? 'low-stock' : ''}">${item.qty}</span></td>
                     <td style="font-family: monospace;">${item.batch}</td>
-                    <td style="color: var(--text-dim);">${item.date}</td>
+                    <td style="${dateStyle}">${item.date}</td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
         }
-
         updatePagination();
     }
 
@@ -188,12 +203,8 @@
     function switchTab(tab) {
         if (currentTab === tab) return;
         currentTab = tab;
-        
-        // 更新 UI 狀態
         document.getElementById('btn-frozen').classList.toggle('active', tab === 'frozen');
         document.getElementById('btn-chilled').classList.toggle('active', tab === 'chilled');
-        
-        // 重載資料
         document.getElementById('inventoryBody').innerHTML = `<tr><td colspan="4" class="loading-msg">切換中...</td></tr>`;
         loadCSVData();
     }
