@@ -33,10 +33,10 @@
         .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         .loading-msg { text-align: center; padding: 50px; color: var(--text-dim); }
 
-        /* [cite: 3] 已過期商品：整列變色與文字刪除線樣式 */
+        /* 已過期商品樣式 */
         .expired-row {
-            background-color: rgba(255, 68, 68, 0.2) !important; /* [cite: 3] 深紅色背景 */
-            text-decoration: line-through; /* [cite: 3] 文字刪除線 */
+            background-color: rgba(255, 68, 68, 0.2) !important; 
+            text-decoration: line-through; 
             color: var(--text-dim);
         }
     </style>
@@ -44,13 +44,13 @@
 <body>
 
 <div class="marquee-container">
-    <marquee scrollamount="5">🚀 庫存資料已於 2026.04.16 更新。</marquee>
+    <marquee scrollamount="5">🚀 庫存資料已於 2026.04.17 更新。</marquee>
 </div>
 
 <div class="container">
     <div class="header">
         <h2>❄️ 庫存查詢系統</h2>
-        <div id="updateTime" style="font-size: 12px; color: var(--text-dim);">最後更新: 26.04.16</div>
+        <div id="updateTime" style="font-size: 12px; color: var(--text-dim);">最後更新: 26.04.17</div>
     </div>
 
     <div class="tabs">
@@ -84,22 +84,32 @@
 </div>
 
 <script>
+    /* ============================================================
+       🔧 欄位索引設定區 (CSV 欄位代號參考)
+       ============================================================
+       0=A, 1=B, 2=C, 3=D, 4=E, 5=F, 6=G, 7=H, 8=I, 9=J, 10=K, 
+       11=L, 12=M, 13=N, 14=O, 15=P, 16=Q, 17=R, 18=S, 19=T, 
+       20=U, 21=V, 22=W, 23=X, 24=Y, 25=Z, 26=AA, 27=AB
+       ============================================================ */
     const CONFIG = {
+        // 冷凍品設定
         frozen: {
             fileName: "frozen.csv",
-            idx_name: 2,
-            idx_qty: 25,
-            idx_batch: 26,
-            idx_date: 27
+            idx_name: 2,   // [C 欄] 品名
+            idx_qty: 25,  // [Z 欄] 數量
+            idx_batch: 26, // [AA 欄] 批號
+            idx_date: 27   // [AB 欄] 有效日期
         },
+        // 冷藏/常溫品設定
         chilled: {
             fileName: "chilled.csv",
-            idx_name: 1,
-            idx_qty: 17,
-            idx_batch: 18,
-            idx_date: 19
+            idx_name: 1,   // [B 欄] 品名
+            idx_qty: 17,  // [R 欄] 數量
+            idx_batch: 18, // [S 欄] 批號
+            idx_date: 19   // [T 欄] 有效日期
         }
     };
+    /* ============================================================ */
 
     let currentAllData = []; 
     let currentFilteredData = []; 
@@ -142,9 +152,6 @@
         renderTable();
     }
 
-    /**
-     *  渲染表格邏輯：包含到期提醒、過期標色與刪除線
-     */
     function renderTable() {
         const tbody = document.getElementById('inventoryBody');
         const start = (currentPage - 1) * ROWS_PER_PAGE;
@@ -154,7 +161,7 @@
             tbody.innerHTML = `<tr><td colspan="4" class="loading-msg">🔍 沒有符合搜尋條件的資料</td></tr>`;
         } else {
             const today = new Date();
-            const warningLimit = 31 * 24 * 60 * 60 * 1000; // [cite: 1] 31天
+            const warningLimit = 31 * 24 * 60 * 60 * 1000; // 31天
 
             tbody.innerHTML = pageData.map(item => {
                 let dateStyle = 'color: var(--text-dim);'; 
@@ -165,11 +172,11 @@
                     const diff = expiryDate - today;
                     
                     if (diff <= 0) {
-                        //  已過期：有效日期文字顯示紅色、整列變色並增加刪除線
+                        // 已過期
                         dateStyle = 'color: #ff4444; font-weight: bold;';
                         rowClass = 'class="expired-row"';
                     } else if (diff <= warningLimit) {
-                        // [cite: 1] 一個月內到期：文字變更為橘黃色 (#ffae00)
+                        // 一個月內到期
                         dateStyle = 'color: #ffae00; font-weight: bold;';
                     }
                 }
