@@ -39,25 +39,6 @@
             text-decoration: line-through; 
             color: var(--text-dim);
         }
-
-        /* 👑 新增：排序欄位專用樣式 */
-        .sortable-th {
-            cursor: pointer;
-            user-select: none;
-            transition: color 0.2s;
-        }
-        .sortable-th:hover {
-            color: var(--primary) !important;
-        }
-        .sort-icon {
-            display: inline-block;
-            margin-left: 5px;
-            font-size: 11px;
-            color: var(--text-dim);
-        }
-        .sortable-th:hover .sort-icon {
-            color: var(--primary);
-        }
     </style>
 </head>
 <body>
@@ -69,7 +50,7 @@
 <div class="container">
     <div class="header">
         <h2>❄️ 庫存查詢系統</h2>
-        <div id="updateTime" style="font-size: 12px; color: var(--text-dim);">最後更新: 26.05.15</div>
+        <div id="updateTime" style="font-size: 12px; color: var(--text-dim);">最後更新: 26.05.08</div>
     </div>
 
     <div class="tabs">
@@ -239,28 +220,53 @@
     }
 </script>
 
+</body>
+<style>
+    /* 排序欄位專用樣式 */
+    .sortable-th {
+        cursor: pointer;
+        user-select: none;
+        transition: color 0.2s;
+    }
+    .sortable-th:hover {
+        color: var(--primary) !important;
+    }
+    .sort-icon {
+        display: inline-block;
+        margin-left: 5px;
+        font-size: 11px;
+        color: var(--text-dim);
+    }
+    .sortable-th:hover .sort-icon {
+        color: var(--primary);
+    }
+</style>
+
 <script>
 (function() {
+    // 儲存當前的排序狀態：'none' (不排序), 'asc' (升冪), 'desc' (降冪)
     let sortConfig = {
-        key: null,     
+        key: null,     // 'batch' 或 'date'
         direction: 'none' 
     };
 
-    // 💡 關鍵智慧修復：動態獲取目前 count.html 在雲端的完整目錄路徑
-    // 這能確保即使在雲端同目錄下，PapaParse 也能以完整的絕對 URL 成功抓到 CSV，避免卡死
-    function getCloudFolderUrl() {
+    // 💡 智慧路徑修正：動態取得當前 count.html 位於雲端空間的絕對目錄 URL
+    // 這能確保 PapaParse 不會因為相對路徑在雲端環境下解析出錯而卡死
+    function getAbsoluteCloudFolder() {
         const currentUrl = window.location.href;
-        // 移除結尾的檔名或參數，保留目錄結構
-        return currentUrl.substring(0, currentUrl.lastIndexOf('/')) + '/';
+        if (currentUrl.indexOf('/') !== -1) {
+            return currentUrl.substring(0, currentUrl.lastIndexOf('/')) + '/';
+        }
+        return '';
     }
 
-    // 1. 攔截並升級原本的資料讀取機制
+    // 1. 動態升級原本的資料讀取機制，修復雲端讀取卡住的問題
     window.customLoadCSVData = function() {
         const settings = CONFIG[currentTab];
-        const folderPath = getCloudFolderUrl();
-        const fullCloudCsvUrl = folderPath + settings.fileName;
+        // 組合出雲端絕對路徑
+        const absoluteUrl = getAbsoluteCloudFolder() + settings.fileName;
 
-        Papa.parse(fullCloudCsvUrl, {
+        Papa.parse(absoluteUrl, {
             download: true,
             header: false,
             skipEmptyLines: true,
@@ -275,7 +281,7 @@
                 window.customProcessAndRender();
             },
             error: function() {
-                // 如果完整的雲端路徑因為空間權限仍被阻擋，降級改用原始相對路徑重試
+                // 如果絕對路域仍有安全限制，降級嘗試使用原始路徑載入
                 Papa.parse(settings.fileName, {
                     download: true,
                     header: false,
@@ -291,16 +297,16 @@
                     },
                     error: function() {
                         document.getElementById('inventoryBody').innerHTML = 
-                            `<tr><td colspan="4" class="loading-msg" style="color:#ff4444;">❌ 無法讀取 ${settings.fileName}<br><span style="font-size:11px;">請確認 CSV 檔案已開啟共用/檢視權限</span></td></tr>`;
+                            `<tr><td colspan="4" class="loading-msg" style="color:#ff4444;">❌ 無法讀取 ${settings.fileName}<br><span style="font-size:11px;">請確認 CSV 檔案已開啟共用、檢視權限並放置於同目錄</span></td></tr>`;
                     }
                 });
             }
         });
     };
-    // 覆蓋原本的讀取函式
+    // 覆蓋原本的 loadCSVData 方法 (Hook 機制)
     window.loadCSVData = window.customLoadCSVData;
 
-    // 2. 整合排序與搜尋核心邏輯
+    // 2. 整合排序與搜尋的核心渲染處理
     window.customProcessAndRender = function() {
         const keyword = document.getElementById('searchInput').value.toLowerCase();
         window.currentFilteredData = window.currentAllData.filter(item => 
@@ -308,11 +314,13 @@
             item.batch.toLowerCase().includes(keyword)
         );
 
+        // 如果點選了排序，則進行排序比對
         if (sortConfig.key && sortConfig.direction !== 'none') {
             window.currentFilteredData.sort((a, b) => {
                 let valA = a[sortConfig.key];
                 let valB = b[sortConfig.key];
 
+                // 智慧防呆：空值或破折號永遠排在最下方
                 if (valA === '-' || !valA) return 1;
                 if (valB === '-' || !valB) return -1;
 
@@ -325,25 +333,29 @@
         window.currentPage = 1;
         window.renderTable();
     };
+    // 覆蓋原本的處理方法
     window.processSearchAndRender = window.customProcessAndRender;
 
-    // 3. 初始化排序 UI 元件
+    // 3. 動態插入「批號」與「有效日期」排序工具 UI
     function initSortUI() {
         const thElements = document.querySelectorAll('table thead th');
         if (thElements.length < 4) return; 
 
-        const batchTh = thElements[2]; 
-        const dateTh = thElements[3];  
+        const batchTh = thElements[2]; // 第三個欄位
+        const dateTh = thElements[3];  // 第四個欄位
 
+        // 設定批號排序點擊事件
         batchTh.classList.add('sortable-th');
         batchTh.innerHTML = '批號 <span id="sort-icon-batch" class="sort-icon">↕</span>';
         batchTh.addEventListener('click', () => handleSortClick('batch'));
 
+        // 設定有效日期排序點擊事件
         dateTh.classList.add('sortable-th');
         dateTh.innerHTML = '有效日期 <span id="sort-icon-date" class="sort-icon">↕</span>';
         dateTh.addEventListener('click', () => handleSortClick('date'));
     }
 
+    // 處理點擊排序狀態切換（不排序 -> 升冪 -> 降冪 -> 不排序）
     function handleSortClick(key) {
         if (sortConfig.key === key) {
             if (sortConfig.direction === 'none') sortConfig.direction = 'asc';
@@ -358,6 +370,7 @@
         window.customProcessAndRender();
     }
 
+    // 更新圖示顯示
     function updateSortIcons() {
         const batchIcon = document.getElementById('sort-icon-batch');
         const dateIcon = document.getElementById('sort-icon-date');
@@ -374,6 +387,7 @@
         }
     }
 
+    // 當切換頁籤 (Tab) 時重設排序狀態
     const originalSwitchTab = window.switchTab;
     window.switchTab = function(tab) {
         sortConfig.key = null;
@@ -382,12 +396,9 @@
         originalSwitchTab(tab);
     };
 
-    // 執行初始化
+    // 執行初始化 UI 與立即發送正確路徑的讀取請求
     initSortUI();
-    // 主動補執行一次，確保雲端檔案重新發送請求
     window.loadCSVData();
 })();
 </script>
-
-</body>
 </html>
