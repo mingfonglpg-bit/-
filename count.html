@@ -246,6 +246,88 @@
         direction: 'none' 
     };
 
+    // 💡 關鍵智慧修復：動態獲取目前 count.html 在雲端的完整目錄路徑
+    // 這能確保即使在雲端同目錄下，PapaParse 也能以完整的絕對 URL 成功抓到 CSV，避免卡死
+    function getCloudFolderUrl() {
+        const currentUrl = window.location.href;
+        // 移除結尾的檔名或參數，保留目錄結構
+        return currentUrl.substring(0, currentUrl.lastIndexOf('/')) + '/';
+    }
+
+    // 1. 攔截並升級原本的資料讀取機制
+    window.customLoadCSVData = function() {
+        const settings = CONFIG[currentTab];
+        const folderPath = getCloudFolderUrl();
+        const fullCloudCsvUrl = folderPath + settings.fileName;
+
+        Papa.parse(fullCloudCsvUrl, {
+            download: true,
+            header: false,
+            skipEmptyLines: true,
+            complete: function(results) {
+                currentAllData = results.data.slice(1).map(row => ({
+                    name: row[settings.idx_name] || '',
+                    qty: parseFloat(row[settings.idx_qty]) || 0,
+                    batch: row[settings.idx_batch] || '-',
+                    date: row[settings.idx_date] || '-'
+                })).filter(item => item.name !== '');
+
+                window.customProcessAndRender();
+            },
+            error: function() {
+                // 如果完整的雲端路徑因為空間權限仍被阻擋，降級改用原始相對路徑重試
+                Papa.parse(settings.fileName, {
+                    download: true,
+                    header: false,
+                    skipEmptyLines: true,
+                    complete: function(res) {
+                        currentAllData = res.data.slice(1).map(row => ({
+                            name: row[settings.idx_name] || '',
+                            qty: parseFloat(row[settings.idx_qty]) || 0,
+                            batch: row[settings.idx_batch] || '-',
+                            date: row[settings.idx_date] || '-'
+                        })).filter(item => item.name !== '');
+                        window.customProcessAndRender();
+                    },
+                    error: function() {
+                        document.getElementById('inventoryBody').innerHTML = 
+                            `<tr><td colspan="4" class="loading-msg" style="color:#ff4444;">❌ 無法讀取 ${settings.fileName}<br><span style="font-size:11px;">請確認 CSV 檔案已開啟共用/檢視權限</span></td></tr>`;
+                    }
+                });
+            }
+        });
+    };
+    // 覆蓋原本的讀取函式
+    window.loadCSVData = window.customLoadCSVData;
+
+    // 2. 整合排序與搜尋核心邏輯
+    window.customProcessAndRender = function() {
+        const keyword = document.getElementById('searchInput').value.toLowerCase();
+        window.currentFilteredData = window.currentAllData.filter(item => 
+            item.name.toLowerCase().includes(keyword) || 
+            item.batch.toLowerCase().includes(keyword)
+        );
+
+        if (sortConfig.key && sortConfig.direction !== 'none') {
+            window.currentFilteredData.sort((a, b) => {
+                let valA = a[sortConfig.key];
+                let valB = b[sortConfig.key];
+
+                if (valA === '-' || !valA) return 1;
+                if (valB === '-' || !valB) return -1;
+
+                if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        window.currentPage = 1;
+        window.renderTable();
+    };
+    window.processSearchAndRender = window.customProcessAndRender;
+
+    // 3. 初始化排序 UI 元件
     function initSortUI() {
         const thElements = document.querySelectorAll('table thead th');
         if (thElements.length < 4) return; 
@@ -292,34 +374,6 @@
         }
     }
 
-    window.customProcessAndRender = function() {
-        const keyword = document.getElementById('searchInput').value.toLowerCase();
-        window.currentFilteredData = window.currentAllData.filter(item => 
-            item.name.toLowerCase().includes(keyword) || 
-            item.batch.toLowerCase().includes(keyword)
-        );
-
-        if (sortConfig.key && sortConfig.direction !== 'none') {
-            window.currentFilteredData.sort((a, b) => {
-                let valA = a[sortConfig.key];
-                let valB = b[sortConfig.key];
-
-                if (valA === '-' || !valA) return 1;
-                if (valB === '-' || !valB) return -1;
-
-                if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-                if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-                return 0;
-            });
-        }
-
-        window.currentPage = 1;
-        window.renderTable();
-    };
-
-    // 覆蓋舊有機制
-    window.processSearchAndRender = window.customProcessAndRender;
-
     const originalSwitchTab = window.switchTab;
     window.switchTab = function(tab) {
         sortConfig.key = null;
@@ -328,14 +382,10 @@
         originalSwitchTab(tab);
     };
 
-    // 初始化 UI
+    // 執行初始化
     initSortUI();
-
-    // ✨ 核心修正點：如果資料在腳本執行前就已經被 PapaParse 載入完畢（currentAllData 已有長度）
-    // 則由這個擴充工具主動觸發一次渲染，避免畫面卡在「讀取中...」
-    if (window.currentAllData && window.currentAllData.length > 0) {
-        window.customProcessAndRender();
-    }
+    // 主動補執行一次，確保雲端檔案重新發送請求
+    window.loadCSVData();
 })();
 </script>
 
