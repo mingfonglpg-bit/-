@@ -332,6 +332,23 @@
         document.body.removeChild(link);
     }
 
+// 🟢 新增：頁面載入時檢查是否有網址參數
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const searchTerm = params.get('search');
+            
+            if (searchTerm) {
+                // 將參數填入搜尋框
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) {
+                    searchInput.value = decodeURIComponent(searchTerm);
+                    // 執行原有的搜尋邏輯
+                    processSearchAndRender();
+                }
+            }
+        });
+
+
     function updatePagination() {
         const totalPages = Math.ceil(currentFilteredData.length / ROWS_PER_PAGE) || 1;
         document.getElementById('pageInfo').innerText = `第 ${currentPage} / ${totalPages} 頁`;
