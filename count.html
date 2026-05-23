@@ -63,6 +63,7 @@
     <div class="tabs">
         <button id="btn-frozen" class="tab-btn active" onclick="switchTab('frozen')">冷凍品</button>
         <button id="btn-chilled" class="tab-btn" onclick="switchTab('chilled')">冷藏品/常溫品</button>
+        <button id="btn-beef" class="tab-btn" onclick="switchTab('beef')">冷藏牛</button>
         <button id="btn-warning" class="tab-btn" onclick="switchTab('warning')">⚠️ 效期預警</button>
         <button id="btn-export" class="tab-btn export-btn" onclick="exportToExcel()">📥 匯出預警檔</button>
     </div>
@@ -117,6 +118,15 @@
             idx_batch: 27, // [AB 欄] 批號
             idx_date: 28,   // [AC 欄] 有效日期
         }
+        // 冷藏牛設定
+        beef: {
+            fileName: "beef.csv",
+            idx_name: 1,   // [C 欄] 品名
+            idx_qty: 4,  // [E 欄] 庫存
+            idx_batch: 0, // [A 欄] 批號
+            idx_date: 5,   // [F 欄] 有效日期
+        }
+
     };
     /* ============================================================ */
 
