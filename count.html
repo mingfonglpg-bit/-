@@ -212,13 +212,14 @@
     }
 
     function processSearchAndRender() {
-        const keyword = document.getElementById('searchInput').value.toLowerCase();
+        // 取得關鍵字，移除所有空格並轉小寫，以便進行彈性比對
+        const keyword = document.getElementById('searchInput').value.toLowerCase().replace(/\s+/g, '');
         
-        // 1. 關鍵字篩選
-        let result = currentAllData.filter(item => 
-            item.name.toLowerCase().includes(keyword) || 
-            item.batch.toLowerCase().includes(keyword)
-        );
+        // 1. 關鍵字篩選：將品名與批號合併，移除空格後與關鍵字比對
+        let result = currentAllData.filter(item => {
+            const combinedText = (item.name + item.batch).toLowerCase().replace(/\s+/g, '');
+            return combinedText.includes(keyword);
+        });
 
         // 2. 排序小工具處理邏輯
         if (sortConfig.key) {
