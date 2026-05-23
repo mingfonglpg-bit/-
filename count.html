@@ -117,9 +117,9 @@
         // 冷藏牛設定
         beef: {
             fileName: "beef.csv",
-            idx_name: 1,   // [C 欄] 品名
-            idx_qty: 4,  // [E 欄] 庫存
-            idx_batch: 0, // [A 欄] 批號
+            idx_name: 2,   // [C 欄] 品名
+            idx_qty: 4,    // [E 欄] 庫存
+            idx_batch: 0,  // [A 欄] 批號
             idx_date: 5,   // [F 欄] 有效日期
         }
     };
@@ -367,7 +367,7 @@
         
         document.getElementById('btn-frozen').classList.toggle('active', tab === 'frozen');
         document.getElementById('btn-chilled').classList.toggle('active', tab === 'chilled');
-        document.getElementById('btn-beef').classList.toggle('active', tab === 'beef'); // 已修復：補上牛頁籤切換
+        document.getElementById('btn-beef').classList.toggle('active', tab === 'beef');
         document.getElementById('btn-warning').classList.toggle('active', tab === 'warning');
         
         // 僅在效期預警頁籤顯示匯出鈕
