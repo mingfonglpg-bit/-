@@ -48,13 +48,13 @@
 <body>
 
 <div class="marquee-container">
-    <marquee scrollamount="5">🚀 庫存資料已於 2026.05.28 更新。</marquee>
+    <marquee scrollamount="5">🚀 庫存資料已於 2026.06.02 更新。</marquee>
 </div>
 
 <div class="container">
     <div class="header">
         <h2>❄️ 庫存查詢系統</h2>
-        <div id="updateTime" style="font-size: 12px; color: var(--text-dim);">最後更新: 26.05.25</div>
+        <div id="updateTime" style="font-size: 12px; color: var(--text-dim);">最後更新: 26.06.02</div>
     </div>
 
     <div class="tabs">
@@ -103,17 +103,17 @@
         frozen: {
             fileName: "frozen.csv",
             idx_name: 2,   // [C 欄] 品名
-            idx_qty: 43,  // [AR 欄] 數量
-            idx_batch: 44, // [AS 欄] 批號
-            idx_date: 45,   // [AT 欄] 有效日期
+            idx_qty: 14,  // [O 欄] 數量
+            idx_batch: 15, // [P 欄] 批號
+            idx_date: 16,   // [Q 欄] 有效日期
         },
         // 冷藏/常溫品設定
         chilled: {
             fileName: "chilled.csv",
             idx_name: 1,   // [B 欄] 品名
-            idx_qty: 33,  // [AH 欄] 數量
-            idx_batch: 34, // [AJ 欄] 批號
-            idx_date: 35,   // [AK 欄] 有效日期
+            idx_qty: 9,  // [J 欄] 數量
+            idx_batch: 10, // [K 欄] 批號
+            idx_date: 11,   // [L 欄] 有效日期
         },
         // 冷藏牛設定
         beef: {
