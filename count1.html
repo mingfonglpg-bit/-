@@ -60,13 +60,13 @@
 <body>
 
 <div class="marquee-container">
-    <marquee scrollamount="5">🚀 庫存資料已於 2026.06.15 更新。</marquee>
+    <marquee scrollamount="5">🚀 庫存資料已於 2026.06.22 更新。</marquee>
 </div>
 
 <div class="container">
     <div class="header">
         <h2>❄️ 庫存查詢系統</h2>
-        <div id="updateTime" style="font-size: 12px; color: var(--text-dim);">最後更新: 26.06.15</div>
+        <div id="updateTime" style="font-size: 12px; color: var(--text-dim);">最後更新: 26.06.22</div>
     </div>
 
     <div class="tabs">
@@ -140,23 +140,23 @@
        ============================================================ */
     const CONFIG = {
         frozen: {
-            fileName: "frozen.csv",
-            idx_name: 2,   // [C 欄] 品名
-            idx_qty: 31,   // [AF 欄] 數量
-            idx_batch: 32, // [AG 欄] 批號
-            idx_date: 33,  // [AH 欄] 有效日期
+            fileName: "frozen1.csv",
+            idx_name: 0,   // [A 欄] 品名
+            idx_qty: 1,   // [B 欄] 數量
+            idx_batch: 2, // [C 欄] 批號
+            idx_date: 3,  // [D 欄] 有效日期
         },
         chilled: {
-            fileName: "chilled.csv",
-            idx_name: 1,   // [B 欄] 品名
-            idx_qty: 24,   // [Y 欄] 數量
-            idx_batch: 25, // [Z 欄] 批號
-            idx_date: 26,  // [AA 欄] 有效日期
+            fileName: "chilled1.csv",
+            idx_name: 0,   // [A 欄] 品名
+            idx_qty: 1,   // [B 欄] 數量
+            idx_batch: 2, // [C 欄] 批號
+            idx_date: 3,  // [D 欄] 有效日期
         },
         beef: {
-            fileName: "beef.csv",
+            fileName: "beef1.csv",
             idx_name: 2,   // [C 欄] 品名
-            idx_qty: 4,    // [E 欄] 庫存
+            idx_qty: 3,    // [E 欄] 庫存
             idx_batch: 0,  // [A 欄] 批號
             idx_date: 5,   // [F 欄] 有效日期
         }
