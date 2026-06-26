@@ -77,7 +77,6 @@
         <button id="btn-export" class="tab-btn export-btn" onclick="exportToExcel()">📥 匯出預警檔</button>
     </div>
 
-    <!-- 效期預警子篩選區 (僅於效期預警頁籤顯示) -->
     <div id="warningFilters" class="warning-filters">
         <div class="warning-group">
             <span class="warning-label">冷凍品：</span>
@@ -133,28 +132,24 @@
 <script>
     /* ============================================================
        🔧 欄位索引設定區 (CSV 欄位代號參考)
-       ============================================================
-       0=A, 1=B, 2=C, 3=D, 4=E, 5=F, 6=G, 7=H, 8=I, 9=J, 10=K, 
-       11=L, 12=M, 13=N, 14=O, 15=P, 16=Q, 17=R, 18=S, 19=T, 
-       20=U, 21=V, 22=W, 23=X, 24=Y, 25=Z, 26=AA, 27=AB
        ============================================================ */
     const CONFIG = {
         frozen: {
-            fileName: "data/frozen.csv",
+            fileName: "https://raw.githubusercontent.com/mingfonglpg-bit/-/main/data/frozen.csv",
             idx_name: 0,   // [A 欄] 品名
             idx_qty: 1,   // [B 欄] 數量
             idx_batch: 2, // [C 欄] 批號
             idx_date: 3,  // [D 欄] 有效日期
         },
         chilled: {
-            fileName: "data/chilled.csv",
+            fileName: "https://raw.githubusercontent.com/mingfonglpg-bit/-/main/data/chilled.csv",
             idx_name: 0,   // [A 欄] 品名
             idx_qty: 1,   // [B 欄] 數量
             idx_batch: 2, // [C 欄] 批號
             idx_date: 3,  // [D 欄] 有效日期
         },
         beef: {
-            fileName: "data/beef.csv",
+            fileName: "https://raw.githubusercontent.com/mingfonglpg-bit/-/main/data/beef.csv",
             idx_name: 2,   // [C 欄] 品名
             idx_qty: 3,    // [E 欄] 庫存
             idx_batch: 0,  // [A 欄] 批號
@@ -239,7 +234,7 @@
                 },
                 error: function() {
                     document.getElementById('inventoryBody').innerHTML = 
-                        `<tr><td colspan="4" class="loading-msg" style="color:#ff4444;">❌ 找不到 ${settings.fileName} 檔案</td></tr>`;
+                        `<tr><td colspan="4" class="loading-msg" style="color:#ff4444;">❌ 讀取失敗，請檢查網路或確認 GitHub 上的檔案是否存在</td></tr>`;
                 }
             });
         }
@@ -279,41 +274,34 @@
     }
 
     function processSearchAndRender() {
-        // 取得關鍵字，移除所有空格並轉小寫，以便進行彈性比對
         const keyword = document.getElementById('searchInput').value.toLowerCase().replace(/\s+/g, '');
         
-        // 1. 關鍵字篩選：將品名與批號合併，移除空格後與關鍵字比對
         let result = currentAllData.filter(item => {
             const combinedText = (item.name + item.batch).toLowerCase().replace(/\s+/g, '');
             return combinedText.includes(keyword);
         });
 
-        // 2. 品項點擊過濾：隱藏庫存為 0 的品項
         if (filterZeroState) {
             result = result.filter(item => item.qty > 0);
         }
 
-        // 3. 排序小工具處理邏輯
         if (sortConfig.key) {
             result.sort((a, b) => {
                 let valA = a[sortConfig.key];
                 let valB = b[sortConfig.key];
                 
-                // 日期欄位轉時間戳比較
                 if (sortConfig.key === 'date') {
                     const dA = new Date(valA).getTime() || 0;
                     const dB = new Date(valB).getTime() || 0;
                     return sortConfig.direction === 'asc' ? dA - dB : dB - dA;
                 }
 
-                // 庫存欄位轉數值比較
                 if (sortConfig.key === 'qty') {
                     const nA = parseFloat(valA) || 0;
                     const nB = parseFloat(valB) || 0;
                     return sortConfig.direction === 'asc' ? nA - nB : nB - nA;
                 }
                 
-                // 一般字串（批號）比較
                 return sortConfig.direction === 'asc' 
                     ? valA.localeCompare(valB, undefined, {numeric: true}) 
                     : valB.localeCompare(valA, undefined, {numeric: true});
@@ -338,19 +326,17 @@
             tbody.innerHTML = pageData.map(item => {
                 let rowClass = ''; 
 
-                // 檢查是否已過期
                 if (item.date && item.date !== '-') {
                     const expiryDate = new Date(item.date);
                     const diff = expiryDate - today;
                     
                     if (diff <= 0) {
-                        rowClass = 'class="expired-row"'; // 規則 5: 已過期列套用紅色+刪除線
+                        rowClass = 'class="expired-row"';
                     }
                 }
 
-                // 檢查數量是否為 0 (優先順序若未過期則套用此項)
                 if (item.qty === 0 && rowClass === '') {
-                    rowClass = 'class="qty-zero-row"'; // 規則 4: 數量為 0 自動加上刪除線
+                    rowClass = 'class="qty-zero-row"';
                 }
 
                 return `
@@ -366,7 +352,6 @@
         updatePagination();
     }
 
-    // 觸發排序切換
     function toggleSort(key) {
         if (sortConfig.key === key) {
             sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
@@ -378,7 +363,6 @@
         processSearchAndRender();
     }
 
-    // 更新排序箭頭
     function updateSortIcons() {
         const batchIcon = document.getElementById('sort-batch');
         const dateIcon = document.getElementById('sort-date');
@@ -389,7 +373,6 @@
         if (qtyIcon)   qtyIcon.innerText   = (sortConfig.key === 'qty')   ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '↕';
     }
 
-    // 品項點擊：切換是否隱藏 0 庫存品項
     function toggleFilterZero() {
         filterZeroState = !filterZeroState;
         const icon = document.getElementById('filter-zero-icon');
@@ -399,7 +382,6 @@
         processSearchAndRender();
     }
 
-    // 匯出「當前自選預警結果」為 Excel (.xlsx) 檔
     function exportToExcel() {
         if (currentTab !== 'warning') {
             alert('請先切換至「效期預警」頁籤再匯出');
@@ -414,7 +396,6 @@
             : (warningFilter.source === 'frozen'  ? '冷凍品'
               : warningFilter.source === 'chilled' ? '冷藏常溫品' : '冷藏牛');
 
-        // 組成 Excel 資料表
         const data = currentFilteredData.map(item => ({
             '來源庫別': item.source || '',
             '品項': item.name,
@@ -424,13 +405,12 @@
         }));
 
         const ws = XLSX.utils.json_to_sheet(data);
-        // 設定欄寬
         ws['!cols'] = [
-            { wch: 12 },  // 來源庫別
-            { wch: 40 },  // 品項
-            { wch: 8 },   // 庫存
-            { wch: 18 },  // 批號
-            { wch: 14 }   // 有效日期
+            { wch: 12 },
+            { wch: 40 },
+            { wch: 8 }, 
+            { wch: 18 },
+            { wch: 14 } 
         ];
 
         const wb = XLSX.utils.book_new();
@@ -440,7 +420,6 @@
         XLSX.writeFile(wb, fileName);
     }
 
-    // 🟢 新增：頁面載入時檢查是否有網址參數
     window.addEventListener('DOMContentLoaded', () => {
         const params = new URLSearchParams(window.location.search);
         const searchTerm = params.get('search');
@@ -461,10 +440,12 @@
         document.getElementById('nextBtn').disabled = (currentPage === totalPages);
     }
 
+    // 修正：當使用者手動輸入搜尋時，會即時觸發過濾並重繪表格
     function handleSearch() {
         processSearchAndRender();
     }
 
+    // 修正：修正點擊分頁按鈕後的切換邏輯
     function changePage(step) {
         currentPage += step;
         renderTable();
@@ -479,11 +460,9 @@
         document.getElementById('btn-beef').classList.toggle('active', tab === 'beef');
         document.getElementById('btn-warning').classList.toggle('active', tab === 'warning');
         
-        // 僅在效期預警頁籤顯示匯出鈕與子篩選區
         document.getElementById('btn-export').style.display = (tab === 'warning') ? 'block' : 'none';
         document.getElementById('warningFilters').style.display = (tab === 'warning') ? 'block' : 'none';
 
-        // 切換頁籤時重置「品項隱藏0庫存」狀態
         filterZeroState = false;
         const icon = document.getElementById('filter-zero-icon');
         const th = document.getElementById('th-name');
