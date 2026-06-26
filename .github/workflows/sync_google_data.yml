@@ -35,9 +35,9 @@ jobs:
           mkdir -p data
           
           # 【請將下方的網址分別替換為你 Google 的 3 個下載網址】
-          URL_FROZEN="https://docs.google.com/spreadsheets/d/e/XXXXXX_1/pub?output=csv"
-          URL_CHILLED="https://docs.google.com/spreadsheets/d/e/XXXXXX_2/pub?output=csv"
-          URL_BEEF="https://docs.google.com/spreadsheets/d/e/XXXXXX_3/pub?output=csv"
+          URL_FROZEN="https://drive.google.com/uc?export=download&id=1-A8PCy049b9iY7TCaZ2RHXRXOGRNKCU1"
+          URL_CHILLED="https://drive.google.com/uc?export=download&id=1RNpifDnLRc3fJJuMeKA_ki52wEDTs9mo"
+          URL_BEEF="https://drive.google.com/uc?export=download&id=1AIjAuNGyp8Lza_7raB_NkC7BlWUxU1SM"
           
           # 執行下載，各自強制指定對應的檔名
           curl -L -o data/frozen.csv "$URL_FROZEN"
