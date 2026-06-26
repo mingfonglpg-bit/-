@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel 多功能智慧資料擷取整合工具</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            max-width: 950px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid #e1e4e8;
+        }
+        h2 { color: #2c3e50; margin-bottom: 25px; text-align: center; }
+        h3 { margin-top: 0; color: #007bff; }
+        .mode-beef h3 { color: #28a745; }
+        
+        label { display: block; margin: 10px 0 5px; font-weight: bold; }
+        select, input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        select { background-color: #fff; cursor: pointer; font-weight: bold; }
+        
+        /* 按鈕群組排版 */
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        button {
+            flex: 1;
+            min-width: 180px;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        
+        /* 智慧模式顏色 */
+        .mode-smart .btn-download { background-color: #007bff; }
+        .mode-smart .btn-download:hover { background-color: #0056b3; }
+        .mode-smart .btn-upload { background-color: #17a2b8; }
+        .mode-smart .btn-upload:hover { background-color: #138496; }
+
+        /* 冷藏牛模式顏色 */
+        .mode-beef .btn-download { background-color: #28a745; }
+        .mode-beef .btn-download:hover { background-color: #218838; }
+        .mode-beef .btn-upload { background-color: #6f42c1; }
+        .mode-beef .btn-upload:hover { background-color: #59359a; }
+
+        .tabs-container {
+            margin-bottom: 15px;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 5px;
+        }
+        .tab-btn {
+            background-color: #e9ecef;
+            color: #495057;
+            border: 1px solid #dee2e6;
+            border-bottom: none;
+            padding: 8px 16px;
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+            margin-right: 4px;
+            cursor: pointer;
+        }
+        .tab-btn.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .mode-beef .tab-btn.active {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            max-height: 500px;
+            margin-top: 10px;
+            border: 1px solid #dee2e6;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            background: white;
+        }
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 10px 12px;
+            text-align: left;
+            white-space: nowrap;
+        }
+        th { background-color: #e9ecef; position: sticky; top: 0; font-weight: bold; }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+            font-weight: bold;
+        }
+        .info { background-color: #e2f0fe; color: #004085; }
+        .success { background-color: #d4edda; color: #155724; }
+        .hint { font-size: 13px; color: #6c757d; margin-bottom: 10px; line-height: 1.5; }
+        .warning-text { color: #dc3545; font-weight: bold; margin-top: 5px; }
+    </style>
+</head>
+<body class="mode-smart" id="bodyContainer">
+
+    <h2>Excel 多功能智慧資料擷取整合工具</h2>
+
+    <div class="card">
+        <h3>0. 選擇處理模式</h3>
+        <label for="toolMode">請選擇您目前要處理的 Excel 類型：</label>
+        <select id="toolMode">
+            <option value="smart">💡 智慧分頁欄位過濾模式 (自動偵測關鍵字 / 冷凍品 / 冷藏常溫品)</option>
+            <option value="beef">🥩 冷藏牛專用雙軌對齊模式 (左右雙軌道精準掃描綁定)</option>
+        </select>
+    </div>
+
+    <div class="card">
+        <h3 id="uploadTitle">1. 開啟 Excel 檔案</h3>
+        <input type="file" id="uploadFile" accept=".xls,.xlsx">
+        <div id="statusMsg" class="status"></div>
+    </div>
+
+    <div class="card" id="previewCard" style="display: none;">
+        <h3>2. 資料預覽</h3>
+        
+        <div id="hintSmart" class="hint">
+            💡 <b>系統智慧功能</b>：分頁名稱包含 [冷凍品] 自動填入 frozen 且抓 C 欄品項；包含 [冷藏常溫品] 自動填入 chilled 且抓 B 欄品項。其餘自動比對表頭關鍵字。
+        </div>
+        <div id="hintBeef" class="hint" style="display: none;">
+            🔒 <b>冷藏牛專用對齊軌道</b>：<br>
+           · 左側區塊：批號=A欄、Packing=B欄、品項=<b>C欄</b>、數量=<b>E欄</b> (動態字尾 -GO-C, -YK-C 等)<br>
+           · 右側 KR 區塊：批號=<b>H欄</b>、Packing=<b>I欄</b>、品項=<b>J欄</b>、數量=<b>L欄</b> (強制字尾 -KR-C)
+        </div>
+        
+        <div class="tabs-container" id="tabsContainer"></div>
+        <div class="table-container" id="tableResult"></div>
+        <div id="mappingWarning" class="warning-text"></div>
+    </div>
+
+    <div class="card" id="saveCard" style="display: none;">
+        <h3>3. 輸出檔案儲存</h3>
+        <label for="fileNameInput">自訂儲存檔名 (不需輸入副檔名):</label>
+        <input type="text" id="fileNameInput" placeholder="請輸入新檔名...">
+        
+        <div class="btn-group">
+            <button id="downloadBtn" class="btn-download">下載 CSV 檔案</button>
+            <button id="uploadBtn" class="btn-upload">☁️ 上傳至 Google 雲端</button>
+        </div>
+    </div>
+
+    <script>
+        let workbookData = null;      
+        let currentSheetName = "";    
+        let originalName = "";        
+        let filteredRowsGlobal = [];  
+
+        const TARGET_KEYWORDS = {
+            total: ["總量", "數量", "總數", "總計", "結存", "庫存餘數", "餘數"],
+            batch: ["批號", "批次", "LOT", "Lot"],
+            date: ["製造日", "到期日", "效期", "日期", "製造", "到期", "有效"]
+        };
+
+        document.getElementById('toolMode').addEventListener('change', function(e) {
+            const mode = e.target.value;
+            const body = document.getElementById('bodyContainer');
+            const hintSmart = document.getElementById('hintSmart');
+            const hintBeef = document.getElementById('hintBeef');
+            const uploadTitle = document.getElementById('uploadTitle');
+            const downloadBtn = document.getElementById('downloadBtn');
+
+            if (mode === 'beef') {
+                body.className = 'mode-beef';
+                hintSmart.style.display = 'none';
+                hintBeef.style.display = 'block';
+                uploadTitle.innerText = '1. 開啟冷藏牛 Excel 檔案';
+                downloadBtn.innerText = '下載 beef.csv 檔案';
+                if(workbookData) { document.getElementById('fileNameInput').value = "beef"; }
+            } else {
+                body.className = 'mode-smart';
+                hintSmart.style.display = 'block';
+                hintBeef.style.display = 'none';
+                uploadTitle.innerText = '1. 開啟 Excel 檔案';
+                downloadBtn.innerText = '另存此分頁為 CSV';
+            }
+
+            if (workbookData && currentSheetName) {
+                executeProcessing();
+            }
+        });
+
+        function formatDateOnly(val) {
+            if (!val) return '';
+            if (val instanceof Date) {
+                if (isNaN(val.getTime())) return '';
+                const y = val.getFullYear();
+                const m = String(val.getMonth() + 1).padStart(2, '0');
+                const d = String(val.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+            const str = String(val).trim();
+            if (str.includes(' ')) {
+                const datePart = str.split(' ')[0];
+                return datePart.replace(/\//g, '-');
+            }
+            return str.replace(/\//g, '-');
+        }
+
+        document.getElementById('uploadFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            originalName = file.name.replace(/\.[^/.]+$/, ""); 
+            const reader = new FileReader();
+            const statusMsg = document.getElementById('statusMsg');
+            
+            statusMsg.style.display = 'block';
+            statusMsg.className = 'status info';
+            statusMsg.innerText = '正在智慧解析檔案中...';
+
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    workbookData = XLSX.read(data, { 
+                        type: 'array',
+                        cellDates: true, 
+                        raw: false
+                    });
+                    
+                    renderTabs(workbookData.SheetNames);
+                    switchSheet(workbookData.SheetNames[0]);
+
+                    document.getElementById('previewCard').style.display = 'block';
+                    document.getElementById('saveCard').style.display = 'block';
+
+                    statusMsg.className = 'status success';
+                    const mode = document.getElementById('toolMode').value;
+                    if(mode === 'beef') {
+                        statusMsg.innerText = `成功載入冷藏牛檔案！檔名已自動鎖定為 beef。`;
+                    } else {
+                        statusMsg.innerText = `成功載入檔案：${file.name}！`;
+                    }
+
+                } catch (error) {
+                    console.error(error);
+                    statusMsg.className = 'status';
+                    statusMsg.style.backgroundColor = '#f8d7da';
+                    statusMsg.style.color = '#721c24';
+                    statusMsg.innerText = '檔案開啟或解析失敗，請確認檔案格式。';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function renderTabs(sheetNames) {
+            const container = document.getElementById('tabsContainer');
+            container.innerHTML = '';
+            sheetNames.forEach(name => {
+                const btn = document.createElement('button');
+                btn.className = 'tab-btn';
+                btn.innerText = name;
+                btn.onclick = () => switchSheet(name);
+                container.appendChild(btn);
+            });
+        }
+
+        function switchSheet(sheetName) {
+            currentSheetName = sheetName;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.innerText === sheetName);
+            });
+
+            const mode = document.getElementById('toolMode').value;
+            const fileNameInput = document.getElementById('fileNameInput');
+            
+            if (mode === 'beef') {
+                fileNameInput.value = "beef";
+            } else {
+                if (sheetName.includes("冷凍品")) {
+                    fileNameInput.value = "frozen";
+                } else if (sheetName.includes("冷藏常溫品")) {
+                    fileNameInput.value = "chilled";
+                } else {
+                    fileNameInput.value = originalName + "_" + sheetName;
+                }
+            }
+
+            executeProcessing();
+        }
+
+        function executeProcessing() {
+            const mode = document.getElementById('toolMode').value;
+            if (mode === 'beef') {
+                processComplexTableBeef();
+            } else {
+                processAndRenderTableSmart();
+            }
+        }
+
+        function processAndRenderTableSmart() {
+            const worksheet = workbookData.Sheets[currentSheetName];
+            const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            
+            if (jsonRows.length === 0) {
+                document.getElementById('tableResult').innerHTML = '<p style="padding:15px; color:#6c757d;">此工作表沒有資料。</p>';
+                return;
+            }
+
+            const firstRow = jsonRows[0]; 
+            let itemColumnIndex = 2; 
+            if (currentSheetName.includes("冷藏常溫品")) {
+                itemColumnIndex = 1; 
+            }
+
+            let colIndices = { item: itemColumnIndex, total: -1, batch: -1, date: -1 };
+
+            for (let i = 0; i < firstRow.length; i++) {
+                const cellText = String(firstRow[i] || '').trim();
+                if (colIndices.total === -1 && TARGET_KEYWORDS.total.some(k => cellText.includes(k))) colIndices.total = i;
+                if (colIndices.batch === -1 && TARGET_KEYWORDS.batch.some(k => cellText.includes(k))) colIndices.batch = i;
+                if (colIndices.date === -1 && TARGET_KEYWORDS.date.some(k => cellText.includes(k))) colIndices.date = i;
+            }
+
+            let missingFields = [];
+            if (colIndices.total === -1) missingFields.push("庫存餘數/總量");
+            if (colIndices.batch === -1) missingFields.push("批號");
+            if (colIndices.date === -1) missingFields.push("製造日/到期日");
+
+            const warningDiv = document.getElementById('mappingWarning');
+            if (missingFields.length > 0) {
+                warningDiv.innerText = `⚠️ 警告：在此分頁中找不到 [${missingFields.join(', ')}] 相關欄位，請檢查 Excel 表頭。`;
+            } else {
+                warningDiv.innerText = "";
+            }
+
+            filteredRowsGlobal = [];
+            const newHeader = ["品項", "總量", "批號", "製造日/到期日"];
+            filteredRowsGlobal.push(newHeader);
+
+            for (let r = 1; r < jsonRows.length; r++) {
+                const row = jsonRows[r];
+                if (!row || row.length === 0) continue; 
+
+                const itemVal = row[colIndices.item] !== undefined ? row[colIndices.item] : '';
+                const totalVal = colIndices.total !== -1 ? (row[colIndices.total] !== undefined ? row[colIndices.total] : '') : '';
+                const batchVal = colIndices.batch !== -1 ? (row[colIndices.batch] !== undefined ? row[colIndices.batch] : '') : '';
+                let dateVal = colIndices.date !== -1 ? (row[colIndices.date] !== undefined ? row[colIndices.date] : '') : '';
+                dateVal = formatDateOnly(dateVal);
+
+                if (itemVal || totalVal || batchVal || dateVal) {
+                    filteredRowsGlobal.push([itemVal, totalVal, batchVal, dateVal]);
+                }
+            }
+            renderHtmlTable();
+        }
+
+        function processComplexTableBeef() {
+            document.getElementById('mappingWarning').innerText = "";
+            const worksheet = workbookData.Sheets[currentSheetName];
+            const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+            
+            if (jsonRows.length === 0) {
+                document.getElementById('tableResult').innerHTML = '<p style="padding:15px; color:#6c757d;">此工作表沒有資料。</p>';
+                return;
+            }
+
+            filteredRowsGlobal = [];
+            filteredRowsGlobal.push(["批號", "Packing", "品項", "A6倉-包"]);
+
+            let maxRows = jsonRows.length;
+            let leftSideData = [];
+            let rightSideData = [];
+            let leftCurrentSuffix = "-GO-C"; 
+
+            for (let r = 0; r < maxRows; r++) {
+                const fullRow = jsonRows[r] || [];
+                let leftRowSegmentStr = [];
+                for(let c = 0; c <= 6; c++) leftRowSegmentStr.push(String(fullRow[c] || '').trim());
+                let leftCombinedText = leftRowSegmentStr.join('|');
+
+                if (leftCombinedText.includes("冷藏") || leftCombinedText.includes("美牛") || leftCombinedText.includes("澳牛") || /-[A-Z0-9]{2,3}-C/.test(leftCombinedText)) {
+                    if (leftCombinedText.includes("YK")) leftCurrentSuffix = "-YK-C";
+                    else if (leftCombinedText.includes("SS")) leftCurrentSuffix = "-SS-C";
+                    else if (leftCombinedText.includes("TY")) leftCurrentSuffix = "-TY-C";
+                    else if (leftCombinedText.includes("GB")) leftCurrentSuffix = "-GB-C";
+                    else if (leftCombinedText.includes("GO")) leftCurrentSuffix = "-GO-C";
+                    continue; 
+                }
+
+                let leftItemVal = String(fullRow[2] || '').trim();
+                let leftPkgVal = String(fullRow[4] || '').trim(); 
+                let leftBatchVal = String(fullRow[0] || '').trim();
+                let leftPackingVal = String(fullRow[1] || '').trim();
+
+                if (leftItemVal && leftItemVal !== "品項" && leftItemVal !== "Packing" && leftItemVal !== "A6倉-包" && leftPkgVal && !isNaN(leftPkgVal) && parseFloat(leftPkgVal) > 0) {
+                    let finalSuffix = leftCurrentSuffix;
+                    if (leftItemVal.includes("M45") || leftItemVal.includes("RFM") || leftItemVal.includes("KR")) {
+                        finalSuffix = "-KR-C";
+                    }
+                    let cleanItemName = leftItemVal.replace(/-GO-C|-YK-C|-SS-C|-TY-C|-GB-C|-KR-C/g, '') + finalSuffix;
+                    leftSideData.push([leftBatchVal, leftPackingVal, cleanItemName, leftPkgVal]);
+                }
+
+                let krBatchVal = String(fullRow[7] || '').trim();
+                let krPackingVal = String(fullRow[8] || '').trim();
+                let krItemVal = String(fullRow[9] || '').trim();
+                let krPkgVal = String(fullRow[11] || '').trim(); 
+
+                if (krItemVal && krItemVal !== "品項" && krItemVal !== "Packing" && krItemVal !== "A6倉-包" && krPkgVal && !isNaN(krPkgVal) && parseFloat(krPkgVal) > 0) {
+                    let cleanItemName = krItemVal.replace(/-GO-C|-YK-C|-SS-C|-TY-C|-GB-C|-KR-C/g, '') + "-KR-C";
+                    rightSideData.push([krBatchVal, krPackingVal, cleanItemName, krPkgVal]);
+                }
+            }
+
+            filteredRowsGlobal = filteredRowsGlobal.concat(leftSideData).concat(rightSideData);
+            renderHtmlTable();
+        }
+
+        function renderHtmlTable() {
+            let html = '<table>';
+            filteredRowsGlobal.forEach((row, rowIndex) => {
+                html += '<tr>';
+                row.forEach(cell => {
+                    if (rowIndex === 0) html += `<th>${cell}</th>`;
+                    else html += `<td>${cell}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</table>';
+            document.getElementById('tableResult').innerHTML = html;
+        }
+
+        // 下載 CSV 按鈕動作
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            if (filteredRowsGlobal.length <= 1) return; 
+
+            const tempWorksheet = XLSX.utils.aoa_to_sheet(filteredRowsGlobal);
+            const csvContent = XLSX.utils.sheet_to_csv(tempWorksheet);
+
+            let userFileName = document.getElementById('fileNameInput').value.trim();
+            if (!userFileName) {
+                const mode = document.getElementById('toolMode').value;
+                userFileName = (mode === 'beef') ? "beef" : "output";
+            }
+            const finalFileName = userFileName + ".csv";
+
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = finalFileName;
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // 【整合修正】上傳至 GAS 雲端功能
+        document.getElementById('uploadBtn').addEventListener('click', async function() {
+            // 檢查是否有資料
+            if (filteredRowsGlobal.length <= 1) {
+                alert('目前沒有可供上傳的資料，請先開啟 Excel 檔案。');
+                return;
+            }
+
+            // 取得自訂檔名，若無則依據模式給定預設值
+            let userFileName = document.getElementById('fileNameInput').value.trim();
+            if (!userFileName) {
+                const mode = document.getElementById('toolMode').value;
+                userFileName = (mode === 'beef') ? "beef" : "output";
+            }
+
+            // 轉換表格陣列為 CSV 格式字串
+            const tempWorksheet = XLSX.utils.aoa_to_sheet(filteredRowsGlobal);
+            const csvDataString = XLSX.utils.sheet_to_csv(tempWorksheet);
+
+            // 你的 GAS 網址
+            const GAS_URL = "https://script.google.com/macros/s/AKfycbzRgZIdKZGrIPNhVmUDdaJaQ-tQjj8bYZxeLDoGYL_tPUWi-8CbA7JOf9ji77Scby0_/exec"; 
+
+            const originalBtnText = this.innerText;
+            this.innerText = "上傳中...";
+
+            try {
+                await fetch(GAS_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fileName: userFileName, csvContent: csvDataString })
+                });
+                alert("資料已成功上傳至 Google 雲端！\n儲存檔名為：" + userFileName);
+            } catch (err) {
+                alert("上傳失敗，請檢查網路或 GAS 部署設定。");
+                console.error(err);
+            } finally {
+                this.innerText = originalBtnText; // 恢復按鈕文字
+            }
+        });
+    </script>
+</body>
+</html>
