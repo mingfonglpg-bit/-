@@ -1,0 +1,49 @@
+name: Daily Google Data Sync (3 Files)
+
+on:
+  schedule:
+    # 每天台北時間晚上 22:00 自動執行 (UTC 14:00)
+    - cron: '0 14 * * *'
+  workflow_dispatch: # 允許你隨時手動點擊按鈕來測試執行
+
+permissions:
+  contents: write # 確保機器人有權限提交並推回代碼
+
+jobs:
+  sync_data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. 檢出儲存庫代碼
+        uses: actions/checkout@v4
+
+      - name: 2. 建立資料夾並抓取 Google 3 個檔案
+        run: |
+          # 建立儲存資料的資料夾
+          mkdir -p data
+          
+          # 【請將下方的網址分別替換為你 Google 的 3 個下載網址】
+          URL_FROZEN="https://docs.google.com/spreadsheets/d/e/XXXXXX_1/pub?output=csv"
+          URL_CHILLED="https://docs.google.com/spreadsheets/d/e/XXXXXX_2/pub?output=csv"
+          URL_BEEF="https://docs.google.com/spreadsheets/d/e/XXXXXX_3/pub?output=csv"
+          
+          # 執行下載，各自強制指定對應的檔名
+          curl -L -o data/frozen.csv "$URL_FROZEN"
+          curl -L -o data/chilled.csv "$URL_CHILLED"
+          curl -L -o data/beef.csv "$URL_BEEF"
+
+      - name: 3. 檢查變動並自動提交回 GitHub
+        run: |
+          # 設定 Git 機器人身份
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # 將 data 資料夾底下的所有變動（包含這 3 個檔案）都加入暫存區
+          git add data/
+          
+          # 檢查 3 個檔案中是否有任何一個有資料變動
+          if ! git diff --cached --quiet; then
+            git commit -m "🤖 自動更新：同步 Google 最新 3 個庫存檔案 (frozen, chilled, beef)"
+            git push
+          else
+            echo "3 個檔案皆無任何變動，跳過本次更新。"
+          fi
