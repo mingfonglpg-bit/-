@@ -60,13 +60,13 @@
 <body>
 
 <div class="marquee-container">
-    <marquee scrollamount="5">🚀 庫存資料已於 2026.06.26 更新。</marquee>
+    <marquee scrollamount="5">🚀 庫存資料已於 2026.06.22 更新。</marquee>
 </div>
 
 <div class="container">
     <div class="header">
         <h2>❄️ 庫存查詢系統</h2>
-        <div id="updateTime" style="font-size: 12px; color: var(--text-dim);">最後更新: 26.06.26</div>
+        <div id="updateTime" style="font-size: 12px; color: var(--text-dim);">最後更新: 26.06.22</div>
     </div>
 
     <div class="tabs">
@@ -151,11 +151,84 @@
         beef: {
             fileName: "https://raw.githubusercontent.com/mingfonglpg-bit/-/main/data/beef.csv",
             idx_name: 2,   // [C 欄] 品名
-            idx_qty: 3,    // [E 欄] 庫存
+            idx_qty: 3,    // [D 欄] 庫存
             idx_batch: 0,  // [A 欄] 批號
-            idx_date: 5,   // [F 欄] 有效日期
+            idx_date: 1,   // [B 欄] 預設日欄位 (若為空，系統會自動全欄位掃描容錯)
         }
     };
+
+    /* ============================================================
+       🥩 冷藏牛特殊規格效期動態計算處理
+       ============================================================ */
+    function processBeefExpiry(item) {
+        if (!item.date || item.date === '-') {
+            item.date = '-';
+            return;
+        }
+        
+      // 依照需求，這裡「僅」擷取品項名稱進行大寫轉換與比對
+        const nameText = (item.name || '').toUpperCase();
+
+        let daysToAdd = 0;
+        
+        // 對應品項名查詢，賦予指定的有效天數
+        if (nameText.includes('GO')) daysToAdd = 120;
+        else if (nameText.includes('YK')) daysToAdd = 123;
+        else if (nameText.includes('SS')) daysToAdd = 89;
+        else if (nameText.includes('TY')) daysToAdd = 140;
+        else if (nameText.includes('KR')) daysToAdd = 119;
+        
+        // 如果符合代碼，則將 PACKING 日期加上指定天數轉換為有效日期
+        if (daysToAdd > 0) {
+            let cleanStr = item.date.trim();
+            
+            // 處理 "~" 範圍格式 (例如 2026.04.14~2026.04.21)，取第一個日期計算最保險
+            if (cleanStr.includes('~')) {
+                cleanStr = cleanStr.split('~')[0].trim();
+            }
+
+            // 將 "." 和 "/" 統一替換為 "-"，處理 2026.06.6 或 2026/06/06 格式
+            cleanStr = cleanStr.replace(/[\.\/]/g, '-');
+
+            let packingDate = null;
+            let y, m, d;
+            
+            // 處理不同的日期字串格式，使用在地時間拆解構造，防範時區偏移
+            if (/^\d{8}$/.test(cleanStr)) {
+                y = parseInt(cleanStr.substring(0, 4), 10);
+                m = parseInt(cleanStr.substring(4, 6), 10) - 1;
+                d = parseInt(cleanStr.substring(6, 8), 10);
+                packingDate = new Date(y, m, d);
+            } else if (/^\d{6}$/.test(cleanStr)) {
+                y = parseInt('20' + cleanStr.substring(0, 2), 10);
+                m = parseInt(cleanStr.substring(2, 4), 10) - 1;
+                d = parseInt(cleanStr.substring(4, 6), 10);
+                packingDate = new Date(y, m, d);
+            } else {
+                let parts = cleanStr.split('-');
+                if (parts.length >= 3) {
+                    y = parseInt(parts[0], 10);
+                    m = parseInt(parts[1], 10) - 1;
+                    d = parseInt(parts[2], 10);
+                    packingDate = new Date(y, m, d);
+                }
+            }
+            
+            // 計算新日期並格式化回標準 YYYY-MM-DD
+            if (packingDate && !isNaN(packingDate.getTime())) {
+                packingDate.setDate(packingDate.getDate() + daysToAdd);
+                const rY = packingDate.getFullYear();
+                const rM = String(packingDate.getMonth() + 1).padStart(2, '0');
+                const rD = String(packingDate.getDate()).padStart(2, '0');
+                item.date = `${rY}-${rM}-${rD}`;
+            } else {
+                item.date = '-';
+            }
+        } else {
+            // 無匹配指定代碼時，有效日期安全顯示 "-"
+            item.date = '-';
+        }
+    }
     /* ============================================================ */
 
     let currentAllData = []; 
@@ -184,13 +257,39 @@
                 header: false,
                 skipEmptyLines: true,
                 complete: function(results) {
-                    const mapped = results.data.slice(1).map(row => ({
-                        name: row[settings.idx_name] || '',
-                        qty: parseFloat(row[settings.idx_qty]) || 0,
-                        batch: row[settings.idx_batch] || '-',
-                        date: row[settings.idx_date] || '-',
-                        source: sourceName
-                    })).filter(item => item.name !== '');
+                    const mapped = results.data.slice(1).map(row => {
+                        let name = row[settings.idx_name] || '';
+                        let qty = parseFloat(row[settings.idx_qty]) || 0;
+                        let batch = row[settings.idx_batch] || '-';
+                        
+                        // 尋找日期欄位（若冷藏牛預設欄位空或為 -，執行全欄位自動偵測掃描）
+                        let rawDate = row[settings.idx_date] ? String(row[settings.idx_date]).trim() : '';
+                        if (sourceName === '冷藏牛' && (!rawDate || rawDate === '-')) {
+                            for (let i = 0; i < row.length; i++) {
+                                if (i === settings.idx_name || i === settings.idx_batch || i === settings.idx_qty) continue;
+                                let val = String(row[i]).trim();
+                                if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(val) || /^\d{8}$/.test(val) || /^\d{6}$/.test(val) || /[\.\~]/.test(val)) {
+                                    rawDate = val;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!rawDate) rawDate = '-';
+
+                        let item = {
+                            name: name,
+                            qty: qty,
+                            batch: batch,
+                            date: rawDate,
+                            source: sourceName
+                        };
+                        
+                        // 如果是冷藏牛，進行動態效期轉換
+                        if (sourceName === '冷藏牛') {
+                            processBeefExpiry(item);
+                        }
+                        return item;
+                    }).filter(item => item.name !== '');
                     resolve(mapped);
                 },
                 error: function() {
@@ -223,12 +322,38 @@
                 header: false,
                 skipEmptyLines: true,
                 complete: function(results) {
-                    currentAllData = results.data.slice(1).map(row => ({
-                        name: row[settings.idx_name] || '',
-                        qty: parseFloat(row[settings.idx_qty]) || 0,
-                        batch: row[settings.idx_batch] || '-',
-                        date: row[settings.idx_date] || '-'
-                    })).filter(item => item.name !== '');
+                    currentAllData = results.data.slice(1).map(row => {
+                        let name = row[settings.idx_name] || '';
+                        let qty = parseFloat(row[settings.idx_qty]) || 0;
+                        let batch = row[settings.idx_batch] || '-';
+                        
+                        // 尋找日期欄位（冷藏牛支援自動跨欄位偵測掃描）
+                        let rawDate = row[settings.idx_date] ? String(row[settings.idx_date]).trim() : '';
+                        if (currentTab === 'beef' && (!rawDate || rawDate === '-')) {
+                            for (let i = 0; i < row.length; i++) {
+                                if (i === settings.idx_name || i === settings.idx_batch || i === settings.idx_qty) continue;
+                                let val = String(row[i]).trim();
+                                if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(val) || /^\d{8}$/.test(val) || /^\d{6}$/.test(val) || /[\.\~]/.test(val)) {
+                                    rawDate = val;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!rawDate) rawDate = '-';
+
+                        let item = {
+                            name: name,
+                            qty: qty,
+                            batch: batch,
+                            date: rawDate
+                        };
+
+                        // 如果是冷藏牛，進行動態效期轉換
+                        if (currentTab === 'beef') {
+                            processBeefExpiry(item);
+                        }
+                        return item;
+                    }).filter(item => item.name !== '');
 
                     processSearchAndRender();
                 },
@@ -291,6 +416,8 @@
                 let valB = b[sortConfig.key];
                 
                 if (sortConfig.key === 'date') {
+                    if (valA === '-') return 1;
+                    if (valB === '-') return -1;
                     const dA = new Date(valA).getTime() || 0;
                     const dB = new Date(valB).getTime() || 0;
                     return sortConfig.direction === 'asc' ? dA - dB : dB - dA;
@@ -440,12 +567,10 @@
         document.getElementById('nextBtn').disabled = (currentPage === totalPages);
     }
 
-    // 修正：當使用者手動輸入搜尋時，會即時觸發過濾並重繪表格
     function handleSearch() {
         processSearchAndRender();
     }
 
-    // 修正：修正點擊分頁按鈕後的切換邏輯
     function changePage(step) {
         currentPage += step;
         renderTable();
