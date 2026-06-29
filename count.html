@@ -161,6 +161,82 @@
             idx_date: 1,   // [B 欄] 有效日期
         }
     };
+
+
+    /* ============================================================
+       🥩 冷藏牛特殊規格效期動態計算處理
+       ============================================================ */
+    function processBeefExpiry(item) {
+        if (!item.date || item.date === '-') {
+            item.date = '-';
+            return;
+        }
+        
+      // 依照需求，這裡「僅」擷取品項名稱進行大寫轉換與比對
+        const nameText = (item.name || '').toUpperCase();
+
+        let daysToAdd = 0;
+        
+        // 對應品項名查詢，賦予指定的有效天數
+        if (nameText.includes('GO')) daysToAdd = 120;
+        else if (nameText.includes('YK')) daysToAdd = 123;
+        else if (nameText.includes('SS')) daysToAdd = 89;
+        else if (nameText.includes('TY')) daysToAdd = 140;
+        else if (nameText.includes('KR')) daysToAdd = 119;
+        
+        // 如果符合代碼，則將 PACKING 日期加上指定天數轉換為有效日期
+        if (daysToAdd > 0) {
+            let cleanStr = item.date.trim();
+            
+            // 處理 "~" 範圍格式 (例如 2026.04.14~2026.04.21)，取第一個日期計算最保險
+            if (cleanStr.includes('~')) {
+                cleanStr = cleanStr.split('~')[0].trim();
+            }
+
+            // 將 "." 和 "/" 統一替換為 "-"，處理 2026.06.6 或 2026/06/06 格式
+            cleanStr = cleanStr.replace(/[\.\/]/g, '-');
+
+            let packingDate = null;
+            let y, m, d;
+            
+            // 處理不同的日期字串格式，使用在地時間拆解構造，防範時區偏移
+            if (/^\d{8}$/.test(cleanStr)) {
+                y = parseInt(cleanStr.substring(0, 4), 10);
+                m = parseInt(cleanStr.substring(4, 6), 10) - 1;
+                d = parseInt(cleanStr.substring(6, 8), 10);
+                packingDate = new Date(y, m, d);
+            } else if (/^\d{6}$/.test(cleanStr)) {
+                y = parseInt('20' + cleanStr.substring(0, 2), 10);
+                m = parseInt(cleanStr.substring(2, 4), 10) - 1;
+                d = parseInt(cleanStr.substring(4, 6), 10);
+                packingDate = new Date(y, m, d);
+            } else {
+                let parts = cleanStr.split('-');
+                if (parts.length >= 3) {
+                    y = parseInt(parts[0], 10);
+                    m = parseInt(parts[1], 10) - 1;
+                    d = parseInt(parts[2], 10);
+                    packingDate = new Date(y, m, d);
+                }
+            }
+            
+            // 計算新日期並格式化回標準 YYYY-MM-DD
+            if (packingDate && !isNaN(packingDate.getTime())) {
+                packingDate.setDate(packingDate.getDate() + daysToAdd);
+                const rY = packingDate.getFullYear();
+                const rM = String(packingDate.getMonth() + 1).padStart(2, '0');
+                const rD = String(packingDate.getDate()).padStart(2, '0');
+                item.date = `${rY}-${rM}-${rD}`;
+            } else {
+                item.date = '-';
+            }
+        } else {
+            // 無匹配指定代碼時，有效日期安全顯示 "-"
+            item.date = '-';
+        }
+    }
+    /* ============================================================ */
+    
     /* ============================================================ */
 
     let currentAllData = []; 
