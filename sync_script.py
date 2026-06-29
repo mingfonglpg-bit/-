@@ -12,7 +12,7 @@ creds = service_account.Credentials.from_service_account_info(
 service = build('drive', 'v3', credentials=creds)
 
 # 這裡填入你的資料夾 ID
-FOLDER_ID = '你的資料夾ID'
+FOLDER_ID = '1NYwrqsSGwVxiD_9rcw0gLC5WM6zUmvxn'
 
 # 列出檔案並下載
 results = service.files().list(q=f"'{FOLDER_ID}' in parents", fields="files(id, name)").execute()
