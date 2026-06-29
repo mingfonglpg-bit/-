@@ -30,11 +30,11 @@ jobs:
           pip install gdown
           mkdir -p data
           
-          # 強制下載並覆寫舊檔
-          # ID 替換為你的實際檔案 ID
-          gdown --id 12dEZzYQ8eezygtsbtME4jfjRV0YfqMQz -O data/frozen.csv --fuzzy
-          gdown --id 1TVhTXjjsoYB3ZIBQDBkWjz-2O6LFn5Hz -O data/chilled.csv --fuzzy
-          gdown --id 12sOU6CMzyjH0XCqFWFxYwg7E8h78oac6 -O data/beef.csv --fuzzy
+          # 直接使用連結進行下載，不需要 --id 和 --fuzzy
+          # 請確保連結格式是：https://drive.google.com/uc?id=你的檔案ID
+          gdown "https://drive.google.com/uc?id=1-A8PCy049b9iY7TCaZ2RHXRXOGRNKCU1" -O data/frozen.csv
+          gdown "https://drive.google.com/uc?id=1RNpifDnLRc3fJJuMeKA_ki52wEDTs9mo" -O data/chilled.csv
+          gdown "https://drive.google.com/uc?id=1AIjAuNGyp8Lza_7raB_NkC7BlWUxU1SM" -O data/beef.csv
 
       - name: 3. 檢查變動並提交
         run: |
