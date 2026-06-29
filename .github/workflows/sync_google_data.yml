@@ -32,9 +32,9 @@ jobs:
           
           # 強制下載並覆寫舊檔
           # ID 替換為你的實際檔案 ID
-          gdown --id 1-A8PCy049b9iY7TCaZ2RHXRXOGRNKCU1 -O data/frozen.csv --fuzzy
-          gdown --id 1RNpifDnLRc3fJJuMeKA_ki52wEDTs9mo -O data/chilled.csv --fuzzy
-          gdown --id 1AIjAuNGyp8Lza_7raB_NkC7BlWUxU1SM -O data/beef.csv --fuzzy
+          gdown --id 12dEZzYQ8eezygtsbtME4jfjRV0YfqMQz -O data/frozen.csv --fuzzy
+          gdown --id 1TVhTXjjsoYB3ZIBQDBkWjz-2O6LFn5Hz -O data/chilled.csv --fuzzy
+          gdown --id 12sOU6CMzyjH0XCqFWFxYwg7E8h78oac6 -O data/beef.csv --fuzzy
 
       - name: 3. 檢查變動並提交
         run: |
