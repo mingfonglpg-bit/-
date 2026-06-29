@@ -13,10 +13,10 @@ on:
     - cron: '0 10 * * *'
     - cron: '0 12 * * *'
     - cron: '0 16 * * *'
-  workflow_dispatch: # 允許手動觸發
+  workflow_dispatch:
 
 permissions:
-  contents: write # 必須擁有寫入權限才能提交程式碼
+  contents: write
 
 jobs:
   sync_data:
@@ -30,26 +30,22 @@ jobs:
           pip install gdown
           mkdir -p data
           
-          # 下載檔案，使用 --no-cookies 以確保不受舊 Session 影響
-          # 請確保你的檔案連結是公開的「檢視者」權限
-          gdown "https://drive.google.com/uc?id=1-A8PCy049b9iY7TCaZ2RHXRXOGRNKCU1" -O data/frozen.csv --no-cookies
-          gdown "https://drive.google.com/uc?id=1RNpifDnLRc3fJJuMeKA_ki52wEDTs9mo" -O data/chilled.csv --no-cookies
-          gdown "https://drive.google.com/uc?id=1AIjAuNGyp8Lza_7raB_NkC7BlWUxU1SM" -O data/beef.csv --no-cookies
+          # 直接把網址當作參數，不要加 --id 或 --fuzzy
+          gdown "https://drive.google.com/uc?id=1-A8PCy049b9iY7TCaZ2RHXRXOGRNKCU1" -O data/frozen.csv
+          gdown "https://drive.google.com/uc?id=1RNpifDnLRc3fJJuMeKA_ki52wEDTs9mo" -O data/chilled.csv
+          gdown "https://drive.google.com/uc?id=1AIjAuNGyp8Lza_7raB_NkC7BlWUxU1SM" -O data/beef.csv
 
       - name: 3. 檢查變動並提交
         run: |
-          # 設定 Git 身份
           git config --local user.name "github-actions[bot]"
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          # 加入變更
           git add data/
           
-          # 檢查是否有檔案變動
+          # 檢查是否有變更
           if git status --porcelain | grep -q "data/"; then
-            echo "偵測到檔案變動，準備提交..."
             git commit -m "🤖 自動更新：同步 Google Drive 最新資料"
             git push
           else
-            echo "無任何檔案變動，無需更新。"
+            echo "無內容變動，跳過。"
           fi
