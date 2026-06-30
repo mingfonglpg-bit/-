@@ -13,7 +13,6 @@ service = build('drive', 'v3', credentials=creds)
 
 # 2. 設定參數
 FOLDER_ID = '1NYwrqsSGwVxiD_9rcw0gLC5WM6zUmvxn'
-# 設定你要同步的檔案列表
 TARGET_FILES = ['frozen.csv', 'chilled.csv', 'beef.csv']
 
 def sync_files():
