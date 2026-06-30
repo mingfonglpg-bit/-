@@ -39,5 +39,15 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add .
-          git commit -m "Auto sync from GDrive" || echo "No changes"
-          git push
+          # 先嘗試 commit，如果有變更才繼續
+          if ! git diff-index --quiet HEAD; then
+            git commit -m "Auto sync from GDrive"
+            
+            # 關鍵步驟：在 push 前先拉取遠端最新變更
+            git pull --rebase origin main
+            
+            # 推送變更
+            git push origin main
+          else
+            echo "No changes to commit"
+          fi
