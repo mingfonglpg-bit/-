@@ -63,4 +63,4 @@ def sync_files():
             print(f"同步 {target_name} 時發生錯誤: {e}")
 
 if __name__ == '__main__':
-    sync_files)
+    sync_files()
