@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Excel 多功能智慧資料整合工具</title>
+    <title>Excel 多功能智慧資料擷取整合工具</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         body {
@@ -131,7 +131,7 @@
 </head>
 <body class="mode-smart" id="bodyContainer">
 
-    <h2>Excel 多功能智慧資料整合工具</h2>
+    <h2>Excel 多功能智慧資料擷取整合工具</h2>
 
     <div class="card">
         <h3>0. 選擇處理模式</h3>
@@ -333,9 +333,12 @@
                 return;
             }
 
+            const isFrozen = currentSheetName.includes("冷凍品");
+            const isChilled = currentSheetName.includes("冷藏常溫品");
+
             const firstRow = jsonRows[0]; 
             let itemColumnIndex = 2; 
-            if (currentSheetName.includes("冷藏常溫品")) {
+            if (isChilled) {
                 itemColumnIndex = 1; 
             }
 
@@ -343,7 +346,27 @@
 
             for (let i = 0; i < firstRow.length; i++) {
                 const cellText = String(firstRow[i] || '').trim();
-                if (colIndices.total === -1 && TARGET_KEYWORDS.total.some(k => cellText.includes(k))) colIndices.total = i;
+                
+                // 處理總量/庫存餘數的篩選邏輯
+                if (colIndices.total === -1) {
+                    if (isFrozen) {
+                        // 冷凍品：排除包含「庫存餘數」的欄位，保留其餘總量關鍵字
+                        if (!cellText.includes("庫存餘數") && TARGET_KEYWORDS.total.some(k => cellText.includes(k))) {
+                            colIndices.total = i;
+                        }
+                    } else if (isChilled) {
+                        // 冷藏常溫品：強制排除 C 欄 (索引值為 2) 的庫存餘數，保留其餘
+                        if (i !== 2 && TARGET_KEYWORDS.total.some(k => cellText.includes(k))) {
+                            colIndices.total = i;
+                        }
+                    } else {
+                        // 一般分頁正常比對
+                        if (TARGET_KEYWORDS.total.some(k => cellText.includes(k))) {
+                            colIndices.total = i;
+                        }
+                    }
+                }
+                
                 if (colIndices.batch === -1 && TARGET_KEYWORDS.batch.some(k => cellText.includes(k))) colIndices.batch = i;
                 if (colIndices.date === -1 && TARGET_KEYWORDS.date.some(k => cellText.includes(k))) colIndices.date = i;
             }
