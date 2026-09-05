@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>倉儲視覺化管理系統</title>
   
-  <!-- CSS 樣式設定 -->
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     .hidden { display: none !important; }
+    .error-msg { color: #dc3545; margin-top: 10px; font-weight: bold; }
     .map-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 15px; }
     .slot { border: 1px solid #ccc; border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; }
     .slot.empty { background-color: #f0f0f0; }
@@ -28,23 +28,68 @@
   <div id="loginScreen">
     <h2>系統登入</h2>
     <form id="loginForm">
-      <input type="text" id="username" placeholder="帳號" required><br><br>
-      <input type="password" id="password" placeholder="密碼" required><br><br>
-      <button type="submit">登入</button>
+      <input type="text" id="username" placeholder="帳號" required autocomplete="username"><br><br>
+      <input type="password" id="password" placeholder="密碼" required autocomplete="current-password"><br><br>
+      <button type="submit" id="btnLogin">登入</button>
     </form>
+    <!-- 增加錯誤提示顯示區 -->
+    <div id="loginError" class="error-msg"></div>
   </div>
 
   <!-- 主系統畫面 -->
   <div id="app" class="hidden">
     <h2>倉儲地圖視覺化</h2>
-    <button onclick="app.auth.logout(); location.reload();">登出</button>
+    <span id="userInfo" style="margin-right: 15px; font-weight: bold;"></span>
+    <button onclick="window.app.auth.logout(); location.reload();">登出</button>
     
     <!-- 視覺化圖譜容器 -->
     <div id="mapGrid" class="map-grid"></div>
   </div>
 
-  <!-- 2. 引入 JS 模組主入口點 (注意 type="module") -->
+  <!-- 2. 引入入口模組 -->
   <script type="module" src="./js/App.js"></script>
+
+  <!-- 3. 綁定登入表單事件監聽 (關鍵修正) -->
+  <script type="module">
+    document.addEventListener('DOMContentLoaded', () => {
+      const loginForm = document.getElementById('loginForm');
+      const errorDiv = document.getElementById('loginError');
+
+      if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+          // 致命 BUG 1 修正：防止表單提交刷新頁面
+          e.preventDefault(); 
+          errorDiv.innerText = '';
+
+          const userVal = document.getElementById('username').value.trim();
+          const passVal = document.getElementById('password').value.trim();
+
+          try {
+            // 呼叫 App 實例的 Auth 模組登入
+            if (!window.app || !window.app.auth) {
+              throw new Error('系統模組載入中，請稍後再試...');
+            }
+
+            const result = await window.app.auth.login(userVal, passVal);
+            
+            if (result.requireForceChange) {
+              const newPass = prompt('首次登入請重設新密碼：');
+              if (newPass) {
+                await window.app.auth.forceChangePassword(userVal, newPass);
+                alert('密碼修改成功！');
+                window.app.showApp();
+              }
+            } else {
+              window.app.showApp();
+            }
+          } catch (err) {
+            // 致命 BUG 3 修正：印出詳細錯誤提示
+            errorDiv.innerText = err.message || '登入失敗';
+          }
+        });
+      }
+    });
+  </script>
 
 </body>
 </html>
