@@ -78,7 +78,7 @@
     <p class="sub">資料來源：count1 相同 CSV（冷凍 / 冷藏常溫 / 冷藏牛）。點品名可開庫位系統搜尋；可手動對應儲位後一鍵跳轉。</p>
 
     <div class="hint">
-        🔗 連結規則：有對應儲位時 → 開啟 <b>ANDROID67_SYNC</b> 並自動搜尋該儲位；無對應時 → 以品名搜尋。<br>
+        🔗 連結規則：有對應儲位時 → 開啟 <b>android12</b> 並自動搜尋該儲位；無對應時 → 以品名搜尋。<br>
         對應資料存在本機 localStorage（key: <code>count_slot_map</code>），可匯出／匯入 JSON。
     </div>
 
@@ -94,7 +94,7 @@
         <button class="btn" onclick="exportMap()">📥 匯出對應</button>
         <button class="btn" onclick="document.getElementById('importFile').click()">📤 匯入對應</button>
         <input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importMap(event)">
-        <a class="btn btn-main" href="https://mingfonglpg-bit.github.io/-/ANDROID67_SYNC.html" target="_blank">開庫位系統</a>
+        <a class="btn btn-main" href="https://mingfonglpg-bit.github.io/-1-1/android12.html" target="_blank">開庫位系統</a>
     </div>
 
     <div class="stats" id="stats">載入中…</div>
@@ -164,7 +164,7 @@
 </div>
 
 <script>
-const ANDROID12 = 'https://mingfonglpg-bit.github.io/-/ANDROID67_SYNC.html';
+const ANDROID12 = 'https://mingfonglpg-bit.github.io/-1-1/android12.html';
 const BASE = 'https://mingfonglpg-bit.github.io/-/';
 
 const CONFIG = {
@@ -185,7 +185,7 @@ function getEffectiveQty(item){ const k=qtyKey(item); return Object.prototype.ha
 function saveQtyStore(){ localStorage.setItem('warehouse_count_qty_overrides', JSON.stringify(qtyOverrides)); localStorage.setItem('warehouse_count_qty_updated_at', String(Date.now())); window.dispatchEvent(new Event('warehouseCountQtyChanged')); }
 function openQtyModal(item){ editingQtyKey=qtyKey(item); document.getElementById('qtyItemName').textContent=`${item.name}（${item.sourceLabel}）`; document.getElementById('qtyInput').value=getEffectiveQty(item); document.getElementById('qtyModal').style.display='flex'; }
 function closeQtyModal(){ document.getElementById('qtyModal').style.display='none'; editingQtyKey=null; }
-function saveQtyOverride(){ if(!editingQtyKey)return; const v=parseFloat(document.getElementById('qtyInput').value); if(!Number.isFinite(v)||v<0){alert('請輸入 0 以上的數量');return;} qtyOverrides[editingQtyKey]=v; saveQtyStore(); try { localStorage.setItem('warehouse_count_catalog', JSON.stringify(allItems.map(it=>({source:it.source,sourceLabel:it.sourceLabel,name:it.name,qty:getEffectiveQty(it)})))); localStorage.setItem('warehouse_count_catalog_updated_at',String(Date.now())); } catch(e){} closeQtyModal(); render(); }
+function saveQtyOverride(){ if(!editingQtyKey)return; const v=parseFloat(document.getElementById('qtyInput').value); if(!Number.isFinite(v)||v<0){alert('請輸入 0 以上的數量');return;} qtyOverrides[editingQtyKey]=v; saveQtyStore(); try { localStorage.setItem('warehouse_count_catalog', JSON.stringify(allItems.map(it=>({source:it.source,sourceLabel:it.sourceLabel,name:it.name,qty:getEffectiveQty(it),batch:it.batch||'',date:it.date||''})))); localStorage.setItem('warehouse_count_catalog_updated_at',String(Date.now())); } catch(e){} closeQtyModal(); render(); }
 window.addEventListener('storage',e=>{ if(e.key==='warehouse_count_qty_overrides'){try{qtyOverrides=JSON.parse(e.newValue||'{}')||{};}catch(_){qtyOverrides={};} render();} });
 window.addEventListener('warehouseCountQtyChanged',()=>render());
 
@@ -247,7 +247,7 @@ async function loadAll() {
     allItems = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
     // 提供給 ANDROID67：COUNT2 品項目錄與目前有效數量，供管理員點擊品名後綁定。
     try {
-        const catalog = allItems.map(it => ({ source: it.source, sourceLabel: it.sourceLabel, name: it.name, qty: getEffectiveQty(it) }));
+        const catalog = allItems.map(it => ({ source: it.source, sourceLabel: it.sourceLabel, name: it.name, qty: getEffectiveQty(it), batch: it.batch || '', date: it.date || '' }));
         localStorage.setItem('warehouse_count_catalog', JSON.stringify(catalog));
         localStorage.setItem('warehouse_count_catalog_updated_at', String(Date.now()));
     } catch(e) { console.warn('COUNT2 品項目錄寫入失敗', e); }

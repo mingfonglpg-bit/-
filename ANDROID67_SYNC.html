@@ -313,7 +313,7 @@
 <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
         <h2 style="margin:0;">📦 庫位狀態</h2>
         <div class="header-actions" style="display:flex; gap:10px; align-items:center;">
-            <a href="https://mingfonglpg-bit.github.io/-/COUNT2_SYNC.html" target="_blank" class="btn-main" style="background:#1e1b4b; color:#c7d2fe; border: 1px solid #4338ca; text-align:center; justify-content:center;">📊 查詢庫存</a>
+            <a href="https://mingfonglpg-bit.github.io/-/count1.html" target="_blank" class="btn-main" style="background:#1e1b4b; color:#c7d2fe; border: 1px solid #4338ca; text-align:center; justify-content:center;">📊 查詢庫存</a>
             <button id="netStatusBtn" onclick="toggleNetworkMode()" class="btn-main status-online" style="justify-content:center;">🌐 線上模式</button>
             <div id="usageInfo" class="usage-badge" style="text-align:center; justify-content:center;">使用率: --%</div>
             <button onclick="fetchData()" class="btn-main" style="background:#334155; justify-content:center;">🔄 刷新</button>
@@ -340,27 +340,13 @@
             <input type="number" id="batchMovePos" placeholder="新儲位號" class="btn" style="width: 90px; padding: 6px;">
             <button onclick="executeBatchMove()" class="btn-main" style="background: var(--warning); padding: 8px 15px;">📦 批次轉移</button>
             <button onclick="executeBatchDelete()" class="btn-main" style="background: var(--danger); padding: 8px 15px;">🗑️ 批次刪除</button>
-            <button onclick="openZoneAdminModal()" class="btn-main" style="background:#0ea5e9; padding: 8px 15px;">🏷️ 主頁庫位管理</button><button onclick="openLayoutConfigModal()" class="btn-main" style="background:#6366f1; padding: 8px 15px;">⚙️ 舊版格局設定</button>
+            <button onclick="openZoneAdminModal()" class="btn-main" style="background:#0ea5e9; padding: 8px 15px;">🏷️ 主頁庫位管理</button>
             <button onclick="openSearchLogModal()" class="btn-main" style="background: var(--primary); padding: 8px 15px; margin-left: auto;">📋 查看搜尋日誌</button>
 <a href="https://mingfonglpg-bit.github.io/-/upload.html" target="_blank" class="btn-main" style="background: var(--edit); padding: 8px 15px; text-decoration: none;">📤 上傳工具</a>
 </div>
     </div>
 
-<!-- 彈窗：庫位格局設定（僅管理員） -->
-<div id="layoutConfigModal" class="modal">
-    <div class="modal-content" style="max-width:720px; max-height:85vh; overflow-y:auto;">
-        <h3 style="color:var(--primary); margin-top:0;">⚙️ 庫位格局設定 <span style="font-size:13px; color:var(--text-dim); font-weight:normal;">（僅管理員）</span></h3>
-        <p style="font-size:13px; color:var(--text-dim); margin-bottom:15px;">設定各區域的「最大儲位編號 (maxPos)」與「每列顯示欄數 (cols)」。變更會存於本機瀏覽器，並立即套用到視覺地圖。</p>
-        <div id="layoutConfigBody" style="display:flex; flex-direction:column; gap:12px;"></div>
-        <div style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap;">
-            <button class="btn-main" style="background:#475569; flex:1;" onclick="closeModal('layoutConfigModal')">取消</button>
-            <button class="btn-main" style="background:#64748b; flex:1;" onclick="resetLayoutConfigs()">還原預設</button>
-            <button class="btn-main" style="background:var(--edit); flex:1;" onclick="saveLayoutConfigs()">💾 儲存並套用</button>
-        </div>
-    </div>
-</div>
-
-    <!-- 庫位視覺化地圖：選擇區域/樓層後，用彩色方格顯示每個儲位的佔用/狀態，
+<!-- 庫位視覺化地圖：選擇區域/樓層後，用彩色方格顯示每個儲位的佔用/狀態，
          點擊方格可快速搜尋該儲位。手機版可左右滑動切換樓層(initTouchEvents) -->
     <section id="visualSection" style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 24px; border: 1px solid var(--border); touch-action: pan-y;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
@@ -369,6 +355,7 @@
                 <div id="floorEmptyCount" class="empty-count-badge">🔲 空庫位: --</div>
             </div>
             <div style="display:flex; gap:8px; align-items:center;">
+                <button id="visualClickModeBtn" onclick="toggleVisualClickMode()" class="btn-main" style="background:#334155; padding:8px 12px; font-size:12px;">🔎 庫位模式：查看資料</button>
                 <button id="colorModeBtn" onclick="toggleColorPickMode()" class="btn-main" style="display:none; background:#334155; padding:8px 12px; font-size:12px;">🎨 自訂顏色模式</button>
                 <select id="vZone" onchange="renderVisual()" class="btn" style="width:120px;"><option value="極冷庫-左">極冷庫-左</option><option value="極冷庫-右">極冷庫-右</option><option value="冷藏庫-左">冷藏庫-左</option><option value="冷藏庫-右">冷藏庫-右</option><option value="常溫區">常溫區</option><option value="乾式熟成-左">乾式熟成-左</option><option value="乾式熟成-右">乾式熟成-右</option></select>
                 <select id="vFloor" onchange="renderVisual()" class="btn" style="width:75px;"><option value="1F">1F</option><option value="2F">2F</option><option value="3F">3F</option><option value="4F">4F</option></select>
@@ -515,49 +502,7 @@ function saveSlotQtyEdits(){
  document.querySelectorAll('.slot-qty-input').forEach(inp=>{const v=parseFloat(inp.value);if(Number.isFinite(v)&&v>=0)countQtyOverrides[inp.dataset.qtyKey]=v;}); saveCountQtyOverrides(); closeModal('slotQtyModal'); renderAll();
 }
 
-function openLayoutConfigModal() {
-        if (!isAdmin) { alert('僅管理員可設定格局'); return; }
-        const body = document.getElementById('layoutConfigBody');
-        const zones = Object.keys(DEFAULT_ZONE_CONFIGS);
-        body.innerHTML = zones.map(z => {
-            const c = zoneConfigs[z] || DEFAULT_ZONE_CONFIGS[z];
-            return `<div style="display:grid; grid-template-columns: 1.4fr 1fr 1fr; gap:10px; align-items:center; background:rgba(255,255,255,0.03); padding:12px; border-radius:12px; border:1px solid var(--border);">
-                <div style="font-weight:600; color:var(--text-main);">${z}</div>
-                <div><label style="font-size:11px; color:var(--text-dim);">最大儲位 (maxPos)</label>
-                    <input type="number" min="1" max="200" class="btn layout-maxpos" data-zone="${z}" value="${c.maxPos}" style="width:100%;"></div>
-                <div><label style="font-size:11px; color:var(--text-dim);">每列欄數 (cols)</label>
-                    <input type="number" min="1" max="20" class="btn layout-cols" data-zone="${z}" value="${c.cols}" style="width:100%;"></div>
-            </div>`;
-        }).join('');
-        document.getElementById('layoutConfigModal').style.display = 'flex';
-    }
-    function saveLayoutConfigs() {
-        if (!isAdmin) return;
-        const next = getDefaultZoneConfigs();
-        document.querySelectorAll('.layout-maxpos').forEach(inp => {
-            const z = inp.dataset.zone;
-            next[z] = next[z] || {};
-            next[z].maxPos = Math.max(1, parseInt(inp.value, 10) || 1);
-        });
-        document.querySelectorAll('.layout-cols').forEach(inp => {
-            const z = inp.dataset.zone;
-            next[z] = next[z] || {};
-            next[z].cols = Math.max(1, parseInt(inp.value, 10) || 1);
-        });
-        localStorage.setItem('warehouse_zone_configs', JSON.stringify(next));
-        zoneConfigs = next;
-        closeModal('layoutConfigModal');
-        renderVisual();
-        alert('格局已儲存並套用');
-    }
-    function resetLayoutConfigs() {
-        if (!confirm('確定還原所有區域為系統預設格局？')) return;
-        localStorage.removeItem('warehouse_zone_configs');
-        zoneConfigs = getDefaultZoneConfigs();
-        closeModal('layoutConfigModal');
-        renderVisual();
-        alert('已還原預設格局');
-    }
+
     let currentPage = 1, rowsPerPage = 10, currentSortField = null, isSortAsc = true, currentDateFilter = 'all'; // 分頁/排序/效期篩選狀態
     let isOfflineMode = false, db = null, expiredItemsList = [], searchFilteredList = [], searchDebounceTimer = null; // 離線模式開關、IndexedDB 連線物件、即期清單、搜尋結果清單
     let searchLogs = JSON.parse(localStorage.getItem('warehouse_search_logs') || '[]'); // 從 localStorage 還原之前的搜尋紀錄
@@ -580,17 +525,24 @@ try { countQtyOverrides = JSON.parse(localStorage.getItem('warehouse_count_qty_o
 try { countBindings = JSON.parse(localStorage.getItem('warehouse_count_bindings') || '{}') || {}; } catch(e) { countBindings = {}; }
 try { countCatalog = JSON.parse(localStorage.getItem('warehouse_count_catalog') || '[]') || []; } catch(e) { countCatalog = []; }
 function countQtyKey(item){ return `${item.source || 'inventory'}|${item.name || ''}`; }
+function countCatalogKey(x){ return `${x.source||''}|${x.name||''}|${x.batch||''}|${x.date||''}`; }
+function countCatalogBaseKey(x){ return `${x.source||''}|${x.name||''}`; }
 function boundCountKey(item){ return countBindings[String(item.name || '').trim()] || ''; }
 function getCountQty(item){
   const boundKey = boundCountKey(item);
-  const k = boundKey || countQtyKey(item);
+  if(boundKey){
+    const parts=boundKey.split('|'); const src=parts[0]||'', name=parts[1]||'', batch=parts[2]||'', date=parts.slice(3).join('|')||'';
+    const matches=countCatalog.filter(x=>String(x.source||'')===src && String(x.name||'')===name && String(x.batch||'')===batch && String(x.date||'')===date);
+    if(matches.length) return matches.reduce((sum,x)=>sum+(Number(x.qty)||0),0);
+  }
+  const k=countQtyKey(item);
   if (Object.prototype.hasOwnProperty.call(countQtyOverrides,k)) return Number(countQtyOverrides[k]) || 0;
-  const c = countCatalog.find(x => `${x.source}|${x.name}` === k);
+  const c = countCatalog.find(x => countCatalogBaseKey(x) === k);
   return c ? Number(c.qty) || 0 : (Number(item.qty) || 0);
 }
 function saveCountQtyOverrides(){ localStorage.setItem('warehouse_count_qty_overrides', JSON.stringify(countQtyOverrides)); localStorage.setItem('warehouse_count_qty_updated_at', String(Date.now())); }
 function saveCountBindings(){ localStorage.setItem('warehouse_count_bindings', JSON.stringify(countBindings)); localStorage.setItem('warehouse_count_bindings_updated_at', String(Date.now())); }
-function refreshCountCatalog(){ try { countCatalog = JSON.parse(localStorage.getItem('warehouse_count_catalog') || '[]') || []; } catch(e) { countCatalog = []; } }
+function refreshCountCatalog(){ try { countCatalog = JSON.parse(localStorage.getItem('warehouse_count_catalog') || '[]') || []; countCatalog=countCatalog.map(x=>({...x,batch:x.batch||'',date:x.date||''})); } catch(e) { countCatalog = []; } }
 let bindingAndroidName = null;
 function openCountBindingModal(androidName){
   if(!isAdmin){ alert('僅管理員可以綁定 COUNT2 品項名稱。'); return; }
@@ -609,8 +561,8 @@ function renderCountBindingOptions(){
   const body=document.getElementById('countBindingOptions');
   if(!list.length){ body.innerHTML='<div style="padding:20px;text-align:center;color:var(--text-dim)">找不到 COUNT2 品項。請先開啟 COUNT2_SYNC.html 讓品項目錄載入。</div>'; return; }
   body.innerHTML=list.map(x=>{
-    const key=`${x.source}|${x.name}`, active=key===current;
-    return `<button type="button" class="btn-main" style="text-align:left;width:100%;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;${active?'outline:2px solid var(--primary);':''}" onclick="selectCountBinding(decodeURIComponent('${encodeURIComponent(key)}'))"><span><b>${escapeHtml(x.name||'')}</b><small style="display:block;color:var(--text-dim)">${escapeHtml(x.sourceLabel||x.source||'')} · COUNT2 數量 ${Number(x.qty)||0}</small></span><span>${active?'✅ 已綁定':'綁定'}</span></button>`;
+    const key=countCatalogKey(x), active=key===current;
+    return `<button type="button" class="btn-main" style="text-align:left;width:100%;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;${active?'outline:2px solid var(--primary);':''}" onclick="selectCountBinding(decodeURIComponent('${encodeURIComponent(key)}'))"><span><b>${escapeHtml(x.name||'')}</b><small style="display:block;color:var(--text-dim)">來源：${escapeHtml(x.sourceLabel||x.source||'')}　·　數量：${Number(x.qty)||0}</small><small style="display:block;color:var(--warning);margin-top:3px">批號：${escapeHtml(x.batch||'未填')}　｜　效期：${escapeHtml(x.date||'未填')}</small></span><span>${active?'✅ 已綁定':'綁定'}</span></button>`;
   }).join('');
 }
 function selectCountBinding(key){
@@ -619,13 +571,14 @@ function selectCountBinding(key){
   saveCountBindings();
   closeModal('countBindingModal');
   renderAll();
-  alert(`✅ 已將「${bindingAndroidName}」綁定到 COUNT2「${key.split('|').slice(1).join('|')}」`);
+  const p=key.split('|'); alert(`✅ 已將「${bindingAndroidName}」綁定到 COUNT2「${p[1]||''}」\n批號：${p[2]||'未填'}\n效期：${p.slice(3).join('|')||'未填'}`);
 }
 function clearCountBinding(){
   if(!bindingAndroidName)return;
   if(!confirm(`解除「${bindingAndroidName}」的 COUNT2 綁定？`))return;
   delete countBindings[bindingAndroidName]; saveCountBindings(); closeModal('countBindingModal'); renderAll();
 }
+updateVisualClickModeButton();
 window.addEventListener('storage', e=>{
   if(e.key==='warehouse_count_qty_overrides' || e.key==='warehouse_count_catalog' || e.key==='warehouse_count_catalog_updated_at') { refreshCountCatalog(); try{countQtyOverrides=JSON.parse(localStorage.getItem('warehouse_count_qty_overrides')||'{}')||{};}catch(_){countQtyOverrides={};} renderAll(); }
   if(e.key==='warehouse_count_bindings'){ try{countBindings=JSON.parse(e.newValue||'{}')||{};}catch(_){countBindings={};} renderAll(); }
@@ -1142,7 +1095,21 @@ function getZoneDisplayName(z){return dynamicZones[z]?.name || z;}
 
     // 繪製「庫位視覺化地圖」：依選定的區域＋樓層，畫出該樓層所有儲位方格，
     // 每格顏色代表佔用狀態（空格/一般佔用/報廢/異常/需補貨...），並計算使用率
-    function renderVisual() {
+    let visualClickMode = localStorage.getItem('warehouse_visual_click_mode') || 'view';
+function updateVisualClickModeButton(){
+ const b=document.getElementById('visualClickModeBtn'); if(!b)return;
+ const edit=visualClickMode==='edit';
+ b.textContent=edit?'🔢 庫位模式：編輯數量':'🔎 庫位模式：查看資料';
+ b.style.background=edit?'var(--edit)':'#334155';
+ b.title=edit?'點擊庫位編輯數量':'點擊庫位後跳到主頁下方顯示該庫位資料';
+}
+function toggleVisualClickMode(){ visualClickMode=visualClickMode==='view'?'edit':'view'; localStorage.setItem('warehouse_visual_click_mode',visualClickMode); updateVisualClickModeButton(); renderVisual(); }
+function showSlotDataBelow(zone,floor,pos){
+ const input=document.getElementById('searchInput'); if(!input)return;
+ input.value=`${zone}${floor}-${pos}`; handleSearchInput(true);
+ setTimeout(()=>{ const target=document.getElementById('dataTableSection') || document.getElementById('tableSection') || document.getElementById('searchInput'); target.scrollIntoView({behavior:'smooth',block:'start'}); },120);
+}
+function renderVisual() {
         const grid = document.getElementById('visualGrid');
         let zone = document.getElementById('vZone').value, floor = document.getElementById('vFloor').value;
         const config = getDynamicZoneConfig(zone, floor);
@@ -1159,11 +1126,13 @@ function getZoneDisplayName(z){return dynamicZones[z]?.name || z;}
             if (isColorPickMode && isAdmin) {
                 slot.style.cursor = 'crosshair';
                 slot.onclick = () => openSlotColorPicker(zone, floor, i);
-            } else if (isAdmin) {
-                slot.onclick = () => openSlotQtyModal(zone, floor, i);
-                slot.title = '管理員：點擊修改此庫位數量；一般使用者：點擊查看';
+                slot.title = '顏色模式：點擊設定庫位顏色';
+            } else if (visualClickMode === 'edit') {
+                if(isAdmin){ slot.onclick = () => openSlotQtyModal(zone, floor, i); slot.title = '編輯模式：點擊修改此庫位數量'; }
+                else { slot.onclick = () => alert('僅管理員可以編輯數量'); slot.title = '僅管理員可編輯數量'; }
             } else {
-                slot.onclick = () => { document.getElementById('searchInput').value = `${zone}${floor}-${i}`; handleSearchInput(true); };
+                slot.onclick = () => showSlotDataBelow(zone, floor, i);
+                slot.title = '查看模式：點擊後到主頁下方顯示此庫位資料';
             }
             if (items.length > 0) {
                 occupied++; slot.classList.add('occupied');
@@ -1654,7 +1623,7 @@ function getZoneDisplayName(z){return dynamicZones[z]?.name || z;}
             card.addEventListener('touchend', (e) => {
                 let fX = e.changedTouches[0].clientX - cardStartX; card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
                 if (fX < -120) { card.style.transform = 'translateX(-100%)'; card.style.opacity = '0'; setTimeout(() => { card.style.display = 'none'; }, 300); }
-                else if (fX > 120) { card.style.transform = 'translateX(0px)'; window.open("https://mingfonglpg-bit.github.io/-/COUNT2_SYNC.html", "_blank"); }
+                else if (fX > 120) { card.style.transform = 'translateX(0px)'; window.open("https://mingfonglpg-bit.github.io/-/count1.html", "_blank"); }
                 else { card.style.transform = 'translateX(0px)'; card.style.opacity = '1'; }
             }, { passive: true });
         });
