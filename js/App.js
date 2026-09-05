@@ -4,7 +4,7 @@ import { OfflineQueue } from './OfflineQueue.js';
 import { Items } from './Items.js';
 import { MapUI } from './MapUI.js';
 
-class App {
+export class App {
   constructor() {
     this.KEYS = {
       items: 'sw_items_v3',
@@ -15,6 +15,7 @@ class App {
       cloud: 'sw_cloud_cfg_v1'
     };
 
+    // 初始化各子模組
     this.auth = new Auth(this.KEYS);
     this.items = new Items(this.KEYS.items);
     this.mapUI = new MapUI('mapGrid', this.items);
@@ -23,10 +24,19 @@ class App {
     this.cloud = new Cloud(cloudCfg, () => this.onRealtimeSync());
     this.offlineQueue = new OfflineQueue(this.cloud);
 
+    // 監聽離線轉連線事件
     window.addEventListener('online', () => this.offlineQueue.processQueue());
   }
 
-  init() {
+  /**
+   * 系統初始化入口點 (改為 async 確保帳號資料建立完成)
+   */
+  async init() {
+    // 確保預設帳號已經建立完成
+    if (typeof this.auth.initDefaultUser === 'function') {
+      await this.auth.initDefaultUser();
+    }
+
     if (this.auth.getCurrentUser()) {
       this.showApp();
     } else {
@@ -35,23 +45,43 @@ class App {
   }
 
   showApp() {
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('app').classList.remove('hidden');
+    const loginEl = document.getElementById('loginScreen');
+    const appEl = document.getElementById('app');
+
+    if (loginEl) loginEl.classList.add('hidden');
+    if (appEl) appEl.classList.remove('hidden');
+
+    // 顯示當前登入者資訊
+    const currentUser = this.auth.getCurrentUser();
+    const userInfoEl = document.getElementById('userInfo');
+    if (currentUser && userInfoEl) {
+      userInfoEl.innerText = `登入者：${currentUser.name || currentUser.username} (${currentUser.role})`;
+    }
+
     this.render();
   }
 
   showLogin() {
-    document.getElementById('loginScreen').classList.remove('hidden');
-    document.getElementById('app').classList.add('hidden');
+    const loginEl = document.getElementById('loginScreen');
+    const appEl = document.getElementById('app');
+
+    if (loginEl) loginEl.classList.remove('hidden');
+    if (appEl) appEl.classList.add('hidden');
   }
 
   onSlotClick(code) {
     console.log('點擊儲位:', code);
-    // 協調 MapUI 與 視圖跳轉
+    const list = this.items.getItemsInSlot(code);
+    if (list.length === 0) {
+      alert(`儲位 [${code}] 目前為空`);
+    } else {
+      const info = list.map(i => `- ${i.name || '未命名項目'} (數量: ${i.quantity || 1})`).join('\n');
+      alert(`儲位 [${code}] 存放物品:\n${info}`);
+    }
   }
 
   async onRealtimeSync() {
-    if (this.cloud.ready) {
+    if (this.cloud.isReady && this.cloud.isReady()) {
       const cloudData = await this.cloud.fetchItems();
       this.items.mergeWithCloud(cloudData);
       this.render();
@@ -59,10 +89,20 @@ class App {
   }
 
   render() {
-    // 進行 MapUI 與 Table 的視圖渲染協調
+    // 取得暫存的格局設定，若無則給予預設圖譜格局 (例如 A 區 8 個儲位)
+    const savedLayout = JSON.parse(localStorage.getItem(this.KEYS.layout)) || { name: 'A', slotsPerFloor: 8 };
+    const currentFloor = 1;
+
+    // 呼叫 MapUI 繪製平面圖
+    if (this.mapUI && typeof this.mapUI.renderMap === 'function') {
+      this.mapUI.renderMap(savedLayout, currentFloor);
+    }
   }
 }
 
-const app = new App();
-window.app = app;
-window.addEventListener('DOMContentLoaded', () => app.init());
+// 確保 DOM 載入後才實例化並綁定全域變數
+window.addEventListener('DOMContentLoaded', async () => {
+  const app = new App();
+  window.app = app; // 掛載至全域，讓 HTML 中的 onclick 可以讀取
+  await app.init();
+});
