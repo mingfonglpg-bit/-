@@ -317,7 +317,7 @@
 <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
         <h2 style="margin:0;">📦 庫位狀態</h2>
         <div class="header-actions" style="display:flex; gap:10px; align-items:center;">
-            <a href="https://mingfonglpg-bit.github.io/-/count1.html" target="_blank" class="btn-main" style="background:#1e1b4b; color:#c7d2fe; border: 1px solid #4338ca; text-align:center; justify-content:center;">📊 查詢庫存</a>
+            <a href="https://mingfonglpg-bit.github.io/-/COUNT2_SYNC_FULL_ROWS.html" target="_blank" class="btn-main" style="background:#1e1b4b; color:#c7d2fe; border: 1px solid #4338ca; text-align:center; justify-content:center;">📊 查詢庫存</a>
             <button id="netStatusBtn" onclick="toggleNetworkMode()" class="btn-main status-online" style="justify-content:center;">🌐 線上模式</button>
             <div id="usageInfo" class="usage-badge" style="text-align:center; justify-content:center;">使用率: --%</div>
             <button onclick="fetchData()" class="btn-main" style="background:#334155; justify-content:center;">🔄 刷新</button>
@@ -1697,7 +1697,7 @@ function renderVisual() {
             card.addEventListener('touchend', (e) => {
                 let fX = e.changedTouches[0].clientX - cardStartX; card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
                 if (fX < -120) { card.style.transform = 'translateX(-100%)'; card.style.opacity = '0'; setTimeout(() => { card.style.display = 'none'; }, 300); }
-                else if (fX > 120) { card.style.transform = 'translateX(0px)'; window.open("https://mingfonglpg-bit.github.io/-/count1.html", "_blank"); }
+                else if (fX > 120) { card.style.transform = 'translateX(0px)'; window.open("https://mingfonglpg-bit.github.io/-/COUNT2_SYNC_FULL_ROWS.html", "_blank"); }
                 else { card.style.transform = 'translateX(0px)'; card.style.opacity = '1'; }
             }, { passive: true });
         });
