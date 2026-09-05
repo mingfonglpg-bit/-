@@ -94,7 +94,7 @@
         <button class="btn" onclick="exportMap()">📥 匯出對應</button>
         <button class="btn" onclick="document.getElementById('importFile').click()">📤 匯入對應</button>
         <input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importMap(event)">
-        <a class="btn btn-main" href="https://mingfonglpg-bit.github.io/-/ANDROID68_V3.html" target="_blank">開庫位系統</a>
+        <a class="btn btn-main" href="https://mingfonglpg-bit.github.io/-/ANDROID68_V3.1.html" target="_blank">開庫位系統</a>
     </div>
 
     <div class="stats" id="stats">載入中…</div>
@@ -164,7 +164,7 @@
 </div>
 
 <script>
-const ANDROID12 = 'https://mingfonglpg-bit.github.io/-/ANDROID68_V3.html';
+const ANDROID12 = 'https://mingfonglpg-bit.github.io/-/ANDROID68_V3.1.html';
 const BASE = 'https://mingfonglpg-bit.github.io/-/';
 
 const CONFIG = {
@@ -180,6 +180,7 @@ const COUNT2_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGRptsGHH3ML
 let cloudCountSlotMap = {};
 let cloudCountQtyOverrides = {};
 let cloudCountBindings = {};
+let cloudInventory = [];
 const COUNT2_USER_KEY = "warehouse_device_user";
 const count2User = localStorage.getItem(COUNT2_USER_KEY) || ("COUNT2-"+Math.random().toString(36).slice(2,7));
 localStorage.setItem(COUNT2_USER_KEY,count2User); // name -> { zone, floor, pos }
@@ -204,7 +205,7 @@ async function count2Post(payload){ const res=await fetch(COUNT2_SCRIPT_URL,{met
 async function count2RefreshCloud(){
   try{ const d=await (await fetch(COUNT2_SCRIPT_URL+'?t='+Date.now(),{cache:'no-store'})).json(); const sh=d.shared||{};
     const unpack=o=>{const x={};Object.keys(o||{}).forEach(k=>x[k]=(o[k]&&Object.prototype.hasOwnProperty.call(o[k],'value'))?o[k].value:o[k]);return x;};
-    cloudCountSlotMap=unpack(sh.countSlotMap); cloudCountQtyOverrides=unpack(sh.countQtyOverrides); cloudCountBindings=unpack(sh.countBindings);
+    cloudCountSlotMap=unpack(sh.countSlotMap); cloudCountQtyOverrides=unpack(sh.countQtyOverrides); cloudCountBindings=unpack(sh.countBindings); cloudInventory=Array.isArray(d.inventory)?d.inventory:[];
     if(Object.keys(cloudCountSlotMap).length){ mapSlot=cloudCountSlotMap; saveSlotStore(); }
     if(Object.keys(cloudCountQtyOverrides).length){ qtyOverrides=cloudCountQtyOverrides; saveQtyStore(); }
     render();
@@ -304,8 +305,28 @@ function setSource(src) {
     render();
 }
 
+function boundInventoryForCount(item){
+    const key=count2ItemKey(item);
+    for(const k of Object.keys(cloudCountBindings||{})){
+        if(String(cloudCountBindings[k])===key && k.startsWith('inv:')){
+            const id=k.slice(4);
+            return cloudInventory.find(x=>String(x.id)===String(id)) || null;
+        }
+    }
+    // 舊版相容：以主頁品名 key 的綁定
+    for(const k of Object.keys(cloudCountBindings||{})){
+        if(String(cloudCountBindings[k])===key){
+            const matches=cloudInventory.filter(x=>String(x.name||'').trim()===String(k).trim());
+            if(matches.length===1) return matches[0];
+        }
+    }
+    return null;
+}
 function buildLink(item) {
-    const m = mapSlot[count2ItemKey(item)] || mapSlot[item.name];
+    const bound=boundInventoryForCount(item);
+    const m = bound
+        ? {zone:bound.zone,floor:bound.floor,pos:bound.pos}
+        : (mapSlot[count2ItemKey(item)] || mapSlot[item.name]);
     if (m && m.zone && m.floor && m.pos) {
         const slot = encodeURIComponent(`${m.zone}|${m.floor}|${m.pos}`);
         return `${ANDROID12}?slot=${slot}`;
@@ -324,7 +345,7 @@ function render() {
     });
 
     document.getElementById('stats').textContent =
-        `顯示 ${list.length} 筆（CSV 完整資料共 ${allItems.length} 筆）· 已對應 ${Object.keys(mapSlot).length} 個品名`;
+        `顯示 ${list.length} 筆（CSV 完整資料共 ${allItems.length} 筆）· 已對應 ${Object.keys(mapSlot).length} 個項目　· 雙向綁定 ${Object.values(cloudCountBindings||{}).length} 筆`;
 
     const tbody = document.getElementById('tbody');
     if (!list.length) {
@@ -333,15 +354,19 @@ function render() {
     }
 
     tbody.innerHTML = list.map(it => {
-        const m = mapSlot[count2ItemKey(it)] || mapSlot[it.name];
+        const bound=boundInventoryForCount(it);
+        const m = bound
+            ? {zone:bound.zone,floor:bound.floor,pos:bound.pos}
+            : (mapSlot[count2ItemKey(it)] || mapSlot[it.name]);
         const slotHtml = m
-            ? `<span class="slot-tag">${m.zone} ${m.floor}-${m.pos}</span>`
+            ? `<span class="slot-tag">${m.zone} ${m.floor}-${m.pos}</span>${bound?'<span class="source" style="color:var(--primary);">🔗 已綁主頁</span>':''}`
             : `<span class="slot-empty">尚未對應</span>`;
         const link = buildLink(it);
         return `<tr>
             <td>
                 <a class="name-link" href="${link}" target="_blank" title="開啟庫位系統">${escapeHtml(it.name)}</a>
                 <div class="source">${it.sourceLabel}</div>
+                ${bound ? `<div style="margin-top:4px;color:var(--primary);font-size:11px;">🔗 已綁主頁：${escapeHtml(bound.zone||'')} ${escapeHtml(bound.floor||'')}-${escapeHtml(String(bound.pos||''))}</div>` : ''}
             </td>
             <td><div class="qty-edit-wrap"><span class="qty ${getEffectiveQty(it) <= 0 ? 'zero' : ''}">${getEffectiveQty(it)}</span><button class="qty-save" onclick='openQtyModal(${JSON.stringify(it)})'>✏️</button></div></td>
             <td>
@@ -421,8 +446,9 @@ function importMap(e) {
             if (typeof data !== 'object' || Array.isArray(data)) throw new Error('格式錯誤');
             mapSlot = data;
             saveSlotStore();
-            render();
-            alert('對應表已匯入');
+            Promise.all(Object.keys(mapSlot).map(k=>count2Post({action:'setCountSlotMap',key:k,value:mapSlot[k],updatedAt:new Date().toISOString(),updatedBy:count2User})))
+              .then(()=>{ render(); alert('對應表已匯入並同步雲端'); })
+              .catch(err=>{ render(); alert('對應表已匯入本機，但部分雲端同步失敗：'+err.message); });
         } catch (err) {
             alert('匯入失敗：' + err.message);
         }
@@ -438,6 +464,7 @@ document.getElementById('mapModal').addEventListener('click', (e) => {
 });
 
 loadAll();
+setInterval(()=>{ if(navigator.onLine) count2RefreshCloud(); },8000);
 </script>
 </body>
 </html>
