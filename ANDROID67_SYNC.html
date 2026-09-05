@@ -885,7 +885,7 @@ function getZoneDisplayName(z){return dynamicZones[z]?.name || z;}
                 document.getElementById('searchInput').value = q;
                 handleSearchInput(true);
             }
-        });
+        }).catch(err => console.warn('主頁初始化讀取失敗（已由 fetchData 處理）：', err));
         initTouchEvents();
     }
 
@@ -1046,16 +1046,36 @@ function getZoneDisplayName(z){return dynamicZones[z]?.name || z;}
     /* === 資料讀取：從 Google Apps Script 取得最新庫存，失敗則改讀本地快取 === */
     async function fetchData() {
         toggleLoader(true);
-        if(isOfflineMode || !navigator.onLine) { await loadFromLocalCache(); toggleLoader(false); return; }
         try {
-            const res = await fetch(SCRIPT_URL), data = await res.json();
-            inventory = data.inventory;
-            applyZoneConfigs(data.configs || {});
-            if(db) db.transaction("cache", "readwrite").objectStore("cache").put({ key: "inventoryData", value: data });
-            await reapplyPendingQueueLocally();
-            updateMarqueeTime(false); autoCheckExpiredDaily(); renderAll();
-        } catch (e) { await loadFromLocalCache(); }
-        toggleLoader(false);
+            // 重要：GAS 若冷啟動/網路沒有回應，原本 fetch 會無限等待，導致主頁看起來一直「載入中」。
+            // 改用 12 秒逾時；逾時或回傳非 JSON 時，立即改讀本機快取。
+            if(isOfflineMode || !navigator.onLine) {
+                await loadFromLocalCache();
+                return;
+            }
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 12000);
+            try {
+                const res = await fetch(SCRIPT_URL, { signal: controller.signal, cache: 'no-store' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (!data || !Array.isArray(data.inventory)) throw new Error('雲端資料格式異常');
+                inventory = data.inventory;
+                applyZoneConfigs(data.configs || {});
+                if(db) db.transaction("cache", "readwrite").objectStore("cache").put({ key: "inventoryData", value: data });
+                await reapplyPendingQueueLocally();
+                updateMarqueeTime(false); autoCheckExpiredDaily(); renderAll();
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        } catch (e) {
+            console.warn('雲端資料讀取失敗，改用本機快取：', e);
+            try { await loadFromLocalCache(); } catch (cacheErr) { console.warn('本機快取讀取失敗：', cacheErr); }
+            // 即使沒有快取，也要把基本畫面畫出來，不再停在載入狀態。
+            try { updateMarqueeTime(false); renderAll(); } catch (renderErr) { console.warn('離線畫面渲染失敗：', renderErr); }
+        } finally {
+            toggleLoader(false);
+        }
     }
 
     // 離線或連不上伺服器時，從 IndexedDB 的 cache 讀出上次成功抓到的資料來顯示
