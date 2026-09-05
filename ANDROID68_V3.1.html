@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚡ 倉儲庫位控管系統 V32.3 </title>
+    <title>⚡ 倉儲庫位控管系統 V36.1 </title>
     <style>
         /* ============ 全域色彩／變數設定 ============
            統一定義主色、警告色、危險色、背景色等，之後所有樣式都透過
@@ -296,7 +296,7 @@
 </div>
 
 <div id="welcome-page" style="height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align: center; padding: 20px;">
-    <h1 style="letter-spacing: 4px; font-size: 2rem; margin-bottom: 30px;">倉儲庫位控管系統 <span style="color:#06b6d4">V32.3</span></h1>
+    <h1 style="letter-spacing: 4px; font-size: 2rem; margin-bottom: 30px;">倉儲庫位控管系統 <span style="color:#06b6d4">V36.1</span></h1>
     <button class="btn-main welcome-btn-v265" style="padding: 20px 80px; border-radius: 50px; font-size: 1rem;" onclick="enterSystem()">啟動系統</button>
 </div>
 
@@ -317,7 +317,8 @@
 <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
         <h2 style="margin:0;">📦 庫位狀態</h2>
         <div class="header-actions" style="display:flex; gap:10px; align-items:center;">
-            <a href="https://mingfonglpg-bit.github.io/-/COUNT2_V3.html" target="_blank" class="btn-main" style="background:#1e1b4b; color:#c7d2fe; border: 1px solid #4338ca; text-align:center; justify-content:center;">📊 查詢庫存</a>
+            <a href="https://mingfonglpg-bit.github.io/-/count1.html" target="_blank" class="btn-main" style="background:#1e1b4b; color:#c7d2fe; border: 1px solid #4338ca; text-align:center; justify-content:center;">📊 查詢庫存</a>
+<a href="https://mingfonglpg-bit.github.io/-/COUNT2_V3.html" target="_blank" class="btn-main" style="background:#1e1b4b; color:#c7d2fe; border: 1px solid #4338ca; text-align:center; justify-content:center;">📊 庫存綁定</a>
             <button id="netStatusBtn" onclick="toggleNetworkMode()" class="btn-main status-online" style="justify-content:center;">🌐 線上模式</button>
             <div id="usageInfo" class="usage-badge" style="text-align:center; justify-content:center;">使用率: --%</div>
             <button onclick="fetchData()" class="btn-main" style="background:#334155; justify-content:center;">🔄 刷新</button>
@@ -539,7 +540,15 @@ try { countCatalog = JSON.parse(localStorage.getItem('warehouse_count_catalog') 
 function countQtyKey(item){ return `${item.source || 'inventory'}|${item.name || ''}|${item.batch || ''}|${item.date || ''}`; }
 function countCatalogKey(x){ return `${x.source||''}|${x.name||''}|${x.batch||''}|${x.date||''}`; }
 function countCatalogBaseKey(x){ return `${x.source||''}|${x.name||''}|${x.batch||''}|${x.date||''}`; }
-function boundCountKey(item){ return countBindings[String(item.name || '').trim()] || ''; }
+function inventoryBindingKey(item){ return item && item.id ? `inv:${String(item.id)}` : ''; }
+function boundCountKey(item){
+  const stable=inventoryBindingKey(item);
+  return (stable && countBindings[stable]) || countBindings[String(item.name || '').trim()] || '';
+}
+function getBoundInventoryIdForCountKey(key){
+  for(const k of Object.keys(countBindings||{})) if(String(countBindings[k])===String(key) && k.startsWith('inv:')) return k.slice(4);
+  return '';
+}
 function getCountQty(item){
   const boundKey = boundCountKey(item);
   if(boundKey){
@@ -553,12 +562,25 @@ function getCountQty(item){
   return c ? Number(c.qty) || 0 : (Number(item.qty) || 0);
 }
 async function saveCountQtyOverrides(){ localStorage.setItem('warehouse_count_qty_overrides', JSON.stringify(countQtyOverrides)); localStorage.setItem('warehouse_count_qty_updated_at', String(Date.now())); const keys=Object.keys(countQtyOverrides); for(const k of keys){ try{ await postShared({action:'setCountQtyOverride',key:k,value:countQtyOverrides[k],updatedAt:new Date().toISOString(),updatedBy:deviceUser}); }catch(e){console.warn('數量雲端同步失敗',e);} } }
-async function saveCountBindings(){ localStorage.setItem('warehouse_count_bindings', JSON.stringify(countBindings)); localStorage.setItem('warehouse_count_bindings_updated_at', String(Date.now())); const k=String(bindingAndroidName||'').trim(); if(k){ try{ await postShared({action:'setCountBinding',key:k,value:countBindings[k]||'',updatedAt:new Date().toISOString(),updatedBy:deviceUser}); }catch(e){console.warn('COUNT2 綁定雲端同步失敗',e);} } }
+async function saveCountBindings(){
+  localStorage.setItem('warehouse_count_bindings', JSON.stringify(countBindings));
+  localStorage.setItem('warehouse_count_bindings_updated_at', String(Date.now()));
+  const item=inventory.find(x=>String(x.name||'').trim()===String(bindingAndroidName||'').trim());
+  const k=inventoryBindingKey(item) || String(bindingAndroidName||'').trim();
+  if(k){
+    try{
+      await postShared({action:'setCountBinding',key:k,value:countBindings[k]||'',updatedAt:new Date().toISOString(),updatedBy:deviceUser});
+    }catch(e){console.warn('COUNT2 綁定雲端同步失敗',e); throw e;}
+  }
+}
 function refreshCountCatalog(){ try { countCatalog = JSON.parse(localStorage.getItem('warehouse_count_catalog') || '[]') || []; countCatalog=countCatalog.map(x=>({...x,batch:x.batch||'',date:x.date||''})); } catch(e) { countCatalog = []; } }
 let bindingAndroidName = null;
-function openCountBindingModal(androidName){
+let bindingAndroidItemId = null;
+function openCountBindingModal(itemOrName){
   if(!isAdmin){ alert('僅管理員可以綁定 COUNT2 品項名稱。'); return; }
-  bindingAndroidName = String(androidName || '').trim();
+  const item = (itemOrName && typeof itemOrName==='object') ? itemOrName : inventory.find(x=>String(x.name||'').trim()===String(itemOrName||'').trim());
+  bindingAndroidName = String(item?.name || itemOrName || '').trim();
+  bindingAndroidItemId = item?.id ? String(item.id) : null;
   refreshCountCatalog();
   document.getElementById('countBindingAndroidName').innerHTML = `ANDROID67 品名：<b>${escapeHtml(bindingAndroidName || '未命名')}</b>`;
   document.getElementById('countBindingSearch').value = '';
@@ -576,7 +598,8 @@ function renderCountBindingOptions(){
 
   const input = document.getElementById('countBindingSearch');
   const kw = (input?.value || '').trim().toLowerCase();
-  const current = countBindings[bindingAndroidName] || '';
+  const bindingItem = inventory.find(x=>String(x.id)===String(bindingAndroidItemId)) || inventory.find(x=>String(x.name||'').trim()===bindingAndroidName);
+  const current = boundCountKey(bindingItem) || '';
 
   // 不再限制 200 筆；完整使用 COUNT2_SYNC 寫入的 catalog。
   // 搜尋範圍：品名、批號、效期、來源名稱。
@@ -629,16 +652,25 @@ function renderCountBindingOptions(){
 }
 function selectCountBinding(key){
   if(!bindingAndroidName || !key) return;
-  countBindings[bindingAndroidName]=key;
-  saveCountBindings();
-  closeModal('countBindingModal');
-  renderAll();
+  const item=inventory.find(x=>String(x.id)===String(bindingAndroidItemId)) || inventory.find(x=>String(x.name||'').trim()===bindingAndroidName);
+  const stableKey=inventoryBindingKey(item) || bindingAndroidName;
+  countBindings[stableKey]=key;
+  // 清掉舊版以品名為 key 的綁定，避免同品名/不同批號產生衝突
+  if(stableKey!==bindingAndroidName) delete countBindings[bindingAndroidName];
+  saveCountBindings().then(()=>{
+    closeModal('countBindingModal'); renderAll();
+  }).catch(e=>alert('綁定已暫存本機，但雲端同步失敗：'+e.message));
   const p=key.split('|'); alert(`✅ 已將「${bindingAndroidName}」綁定到 COUNT2「${p[1]||''}」\n批號：${p[2]||'未填'}\n效期：${p.slice(3).join('|')||'未填'}`);
 }
 function clearCountBinding(){
   if(!bindingAndroidName)return;
   if(!confirm(`解除「${bindingAndroidName}」的 COUNT2 綁定？`))return;
-  const bk=bindingAndroidName; delete countBindings[bindingAndroidName]; saveCountBindings(); try{postShared({action:'deleteCountBinding',key:bk});}catch(_){ } closeModal('countBindingModal'); renderAll();
+  const item=inventory.find(x=>String(x.id)===String(bindingAndroidItemId)) || inventory.find(x=>String(x.name||'').trim()===bindingAndroidName);
+  const bk=inventoryBindingKey(item) || bindingAndroidName;
+  delete countBindings[bk];
+  if(bk!==bindingAndroidName) delete countBindings[bindingAndroidName];
+  localStorage.setItem('warehouse_count_bindings',JSON.stringify(countBindings));
+  postShared({action:'deleteCountBinding',key:bk}).then(()=>{closeModal('countBindingModal');renderAll();}).catch(e=>alert('本機已解除，但雲端同步失敗：'+e.message));
 }
 // FIX: 先初始化 visualClickMode，再更新按鈕
 let visualClickMode = localStorage.getItem('warehouse_visual_click_mode') || 'view';
@@ -1116,7 +1148,19 @@ function getZoneDisplayName(z){return dynamicZones[z]?.name || z;}
         sharedCountSlotMap=unpack(shared.countSlotMap);
         sharedCountBindings=unpack(shared.countBindings);
         sharedCountQtyOverrides=unpack(shared.countQtyOverrides);
-        if(Object.keys(sharedCountBindings).length){ countBindings=sharedCountBindings; localStorage.setItem('warehouse_count_bindings',JSON.stringify(countBindings)); }
+        if(Object.keys(sharedCountBindings).length){
+          countBindings=sharedCountBindings;
+          // 舊版以品名為 key 的資料：若該品名在主頁只有一筆，升級成穩定 inventory ID key
+          const migrated={...countBindings};
+          Object.keys(countBindings).forEach(k=>{
+            if(!k.startsWith('inv:')){
+              const matches=inventory.filter(x=>String(x.name||'').trim()===k);
+              if(matches.length===1){ migrated[inventoryBindingKey(matches[0])]=countBindings[k]; delete migrated[k]; }
+            }
+          });
+          countBindings=migrated;
+          localStorage.setItem('warehouse_count_bindings',JSON.stringify(countBindings));
+        }
         if(Object.keys(sharedCountQtyOverrides).length){ countQtyOverrides=sharedCountQtyOverrides; localStorage.setItem('warehouse_count_qty_overrides',JSON.stringify(countQtyOverrides)); }
         renderAll();
     }
@@ -1413,7 +1457,7 @@ function renderVisual() {
             <tr class="mobile-card-row" data-id="${i.id}">
                 <td class="td-select-cell" style="${isAdmin ? '' : 'display:none;'} text-align:center;"><input type="checkbox" class="row-select-box" value="${i.id}"></td>
                 <td data-label="儲位位置"><b style="color:${customSlotColors[getSlotColorKey(i.zone, i.floor, i.pos)] || getZoneColor(i.zone)}">${i.floor}-${i.pos}</b><small style="color:${customSlotColors[getSlotColorKey(i.zone, i.floor, i.pos)] || getZoneColor(i.zone)}; opacity: 0.85; font-weight: bold; margin-left: 5px;">${i.zone}</small></td>
-                <td data-label="產品內容"><b class="android-product-name" style="cursor:${isAdmin?'pointer':'default'};text-decoration:${isAdmin?'underline dotted':'none'};text-underline-offset:3px;" title="${isAdmin?'點擊綁定 COUNT2 品項名稱':''}" onclick="${isAdmin?`openCountBindingModal(decodeURIComponent('${encodeURIComponent(i.name || '')}'))`:''}">${i.name}</b>${countBindings[String(i.name||'').trim()] ? `<span class="report-label" style="background:rgba(34,211,238,.12);color:var(--primary);">🔗 已綁 COUNT2</span>` : ''}${i.note ? `<span class="report-label">⚠️ ${i.note}</span>` : ''}</td><td data-label="數量"><b>${getCountQty(i)}</b>${countBindings[String(i.name||'').trim()] ? `<small style="display:block;color:var(--primary);">COUNT2</small>` : ''}</td><td data-label="在庫庫存"><input data-stock-id="${escapeHtml(i.id)}" type="number" min="0" step="0.01" value="${escapeHtml(getInventoryStock(i))}" placeholder="未設定" style="width:105px;padding:7px 8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" onchange="saveInventoryStock(inventory.find(x=>String(x.id)===String(this.dataset.stockId)),this.value)"><small style="display:block;color:var(--text-dim);font-size:10px;">所有使用者可修改</small></td>
+                <td data-label="產品內容"><b class="android-product-name" style="cursor:${isAdmin?'pointer':'default'};text-decoration:${isAdmin?'underline dotted':'none'};text-underline-offset:3px;" title="${isAdmin?'點擊綁定 COUNT2 品項名稱':''}" onclick="${isAdmin?`openCountBindingModal(${JSON.stringify(i).replace(/"/g,'&quot;')})`:''}">${i.name}</b>${boundCountKey(i) ? `<span class="report-label" style="background:rgba(34,211,238,.12);color:var(--primary);">🔗 已綁 COUNT2</span>` : ''}${i.note ? `<span class="report-label">⚠️ ${i.note}</span>` : ''}</td><td data-label="數量"><b>${getCountQty(i)}</b>${boundCountKey(i) ? `<small style="display:block;color:var(--primary);">COUNT2</small>` : ''}</td><td data-label="在庫庫存"><input data-stock-id="${escapeHtml(i.id)}" type="number" min="0" step="0.01" value="${escapeHtml(getInventoryStock(i))}" placeholder="未設定" style="width:105px;padding:7px 8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" onchange="saveInventoryStock(inventory.find(x=>String(x.id)===String(this.dataset.stockId)),this.value)"><small style="display:block;color:var(--text-dim);font-size:10px;">所有使用者可修改</small></td>
                 <td data-label="有效日期">${i.date ? i.date.split('T')[0] : '-'}</td>
                 <td data-label="批號碼"><code>${i.batch || '-'}</code></td>
                <td data-label="備註狀態"><small style="max-width: 100% !important; white-space: normal !important; display: inline-block; word-break: break-all;">${i.note ? i.note : '正常'}</small></td>
@@ -1757,7 +1801,7 @@ function renderVisual() {
             card.addEventListener('touchend', (e) => {
                 let fX = e.changedTouches[0].clientX - cardStartX; card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
                 if (fX < -120) { card.style.transform = 'translateX(-100%)'; card.style.opacity = '0'; setTimeout(() => { card.style.display = 'none'; }, 300); }
-                else if (fX > 120) { card.style.transform = 'translateX(0px)'; window.open("https://mingfonglpg-bit.github.io/-/COUNT2_V3.html", "_blank"); }
+                else if (fX > 120) { card.style.transform = 'translateX(0px)'; window.open("https://mingfonglpg-bit.github.io/-/count1.html", "_blank"); }
                 else { card.style.transform = 'translateX(0px)'; card.style.opacity = '1'; }
             }, { passive: true });
         });
