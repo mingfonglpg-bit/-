@@ -128,3 +128,65 @@ function setupRealtime() {
       .subscribe(status => { if (status === 'SUBSCRIBED') updateCloudBadge(); });
   } catch (e) { console.warn('realtime', e); }
 }
+// 打開 Supabase 設定視窗
+function openCloudModal() {
+  const cfg = getCloudCfg();
+  document.getElementById('cfgCloudEnabled').checked = !!cfg.enabled;
+  document.getElementById('cfgCloudUrl').value = cfg.url || '';
+  document.getElementById('cfgCloudKey').value = cfg.key || '';
+  document.getElementById('cloudModal').classList.add('show');
+}
+
+// 關閉 Supabase 設定視窗
+function closeCloudModal() {
+  document.getElementById('cloudModal').classList.remove('show');
+}
+
+// 儲存雲端設定並觸發同步
+function saveCloudConfig() {
+  const enabled = document.getElementById('cfgCloudEnabled').checked;
+  const url = document.getElementById('cfgCloudUrl').value.trim();
+  const key = document.getElementById('cfgCloudKey').value.trim();
+
+  if (enabled && (!url || !key)) {
+    toast('啟用雲端功能時，URL 與 API Key 不能為空！', 'err');
+    return;
+  }
+
+  cloudCfg = { enabled, url, key };
+  save(KEYS.cloud, cloudCfg);
+  closeCloudModal();
+
+  if (enabled) {
+    const ok = initSupabaseClient();
+    if (ok) {
+      toast('雲端設定已儲存，嘗試進行同步...', 'info');
+      mergeSyncWithCloud(false);
+    } else {
+      toast('Supabase 初始化失敗，請檢查 URL 與 Key', 'err');
+    }
+  } else {
+    updateCloudBadge();
+    toast('已停用雲端同步，切換為純本機模式', 'info');
+  }
+}
+
+// 打開 SQL 腳本彈窗
+function openSqlModal() {
+  document.getElementById('sqlBox').textContent = SUPABASE_SQL;
+  document.getElementById('sqlModal').classList.add('show');
+}
+
+// 關閉 SQL 腳本彈窗
+function closeSqlModal() {
+  document.getElementById('sqlModal').classList.remove('show');
+}
+
+// 複製 SQL 腳本到剪貼簿
+function copySqlScript() {
+  navigator.clipboard.writeText(SUPABASE_SQL).then(() => {
+    toast('SQL 腳本已複製到剪貼簿！', 'ok');
+  }).catch(() => {
+    toast('複製失敗，請手動全選複製', 'err');
+  });
+}
