@@ -1,95 +1,82 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>倉儲視覺化管理系統</title>
-  
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    .hidden { display: none !important; }
-    .error-msg { color: #dc3545; margin-top: 10px; font-weight: bold; }
-    .map-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 15px; }
-    .slot { border: 1px solid #ccc; border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; }
-    .slot.empty { background-color: #f0f0f0; }
-    .slot.occupied { background-color: #d4edda; }
-    .slot.low { background-color: #fff3cd; }
-    .slot-code { font-weight: bold; }
-    .slot-qty { font-size: 1.2em; color: #007bff; }
-    .slot-count { font-size: 0.8em; color: #6c757d; }
-  </style>
-
-  <!-- 1. 引入外部 Supabase SDK -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智慧倉儲系統</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-  <!-- 登入畫面 -->
-  <div id="loginScreen">
-    <h2>系統登入</h2>
-    <form id="loginForm">
-      <input type="text" id="username" placeholder="帳號" required autocomplete="username"><br><br>
-      <input type="password" id="password" placeholder="密碼" required autocomplete="current-password"><br><br>
-      <button type="submit" id="btnLogin">登入</button>
-    </form>
-    <!-- 增加錯誤提示顯示區 -->
-    <div id="loginError" class="error-msg"></div>
+<div id="loginScreen" class="login-screen">
+  <h1>📦 智慧倉儲系統</h1>
+  <p class="sub">SKU · 庫存 · 圖譜 · 權限控管</p>
+  <div id="loginForm">
+    <div class="form-group full" style="margin-bottom:10px"><label>帳號</label><input type="text" id="loginUser" value="admin"></div>
+    <div class="form-group full" style="margin-bottom:14px"><label>密碼</label><input type="password" id="loginPass" value="admin123"></div>
+    <button style="width:100%;padding:10px" onclick="doLogin()">🚀 登入系統</button>
+    <button class="outline" style="width:100%;margin-top:8px;padding:10px" onclick="enterAsGuest()">👀 訪客瀏覽（僅檢視）</button>
+  </div>
+</div>
+
+<div id="app" class="container hidden">
+  <header>
+    <div>
+      <h1>📦 智慧倉儲 · SKU + 圖譜 + 權限</h1>
+      <div style="font-size:12px;opacity:.9;margin-top:2px"><span id="userLabel"></span> <span id="roleBadge" class="role-badge"></span></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span class="cloud-badge off" id="cloudBadge">☁ 本機</span>
+      <button class="ghost" onclick="mergeSyncWithCloud(false)">🔄 同步</button>
+      <button class="ghost" onclick="doLogout()">🚪 登出</button>
+    </div>
+  </header>
+  
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <div class="info-panel" id="infoPanel">
+    <div class="stats" id="stats"></div>
   </div>
 
-  <!-- 主系統畫面 -->
-  <div id="app" class="hidden">
-    <h2>倉儲地圖視覺化</h2>
-    <span id="userInfo" style="margin-right: 15px; font-weight: bold;"></span>
-    <button onclick="window.app.auth.logout(); location.reload();">登出</button>
-    
-    <!-- 視覺化圖譜容器 -->
-    <div id="mapGrid" class="map-grid"></div>
+  <div class="card">
+    <div class="card-header">
+      <h2>🗺️ 儲位視覺化圖譜</h2>
+      <div style="display:flex;gap:8px">
+        <div class="zone-tabs" id="zoneTabs"></div>
+        <select id="floorSelect" onchange="onFloorChange()"></select>
+      </div>
+    </div>
+    <div style="padding:12px 14px">
+      <div class="map-grid-wrapper"><div class="map-grid" id="mapGrid"></div></div>
+    </div>
   </div>
 
-  <!-- 2. 引入入口模組 -->
-  <script type="module" src="./js/App.js"></script>
+  <div class="card">
+    <div class="card-header"><h2>📋 庫存列表</h2></div>
+    <div class="table-wrap" style="overflow-x:auto"><table>
+      <thead><tr>
+        <th class="chk"><input type="checkbox"></th>
+        <th>SKU</th>
+        <th>儲位</th>
+        <th>產品名稱</th>
+        <th>數量</th>
+        <th>單位</th>
+        <th>散裝</th>
+        <th>狀態</th>
+        <th>批號</th>
+        <th>有效日期</th>
+        <th>備註</th>
+        <th>操作</th>
+      </tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table></div>
+    <div id="emptyState" class="empty hidden">尚無資料</div>
+  </div>
+</div>
 
-  <!-- 3. 綁定登入表單事件監聽 (關鍵修正) -->
-  <script type="module">
-    document.addEventListener('DOMContentLoaded', () => {
-      const loginForm = document.getElementById('loginForm');
-      const errorDiv = document.getElementById('loginError');
-
-      if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-          // 致命 BUG 1 修正：防止表單提交刷新頁面
-          e.preventDefault(); 
-          errorDiv.innerText = '';
-
-          const userVal = document.getElementById('username').value.trim();
-          const passVal = document.getElementById('password').value.trim();
-
-          try {
-            // 呼叫 App 實例的 Auth 模組登入
-            if (!window.app || !window.app.auth) {
-              throw new Error('系統模組載入中，請稍後再試...');
-            }
-
-            const result = await window.app.auth.login(userVal, passVal);
-            
-            if (result.requireForceChange) {
-              const newPass = prompt('首次登入請重設新密碼：');
-              if (newPass) {
-                await window.app.auth.forceChangePassword(userVal, newPass);
-                alert('密碼修改成功！');
-                window.app.showApp();
-              }
-            } else {
-              window.app.showApp();
-            }
-          } catch (err) {
-            // 致命 BUG 3 修正：印出詳細錯誤提示
-            errorDiv.innerText = err.message || '登入失敗';
-          }
-        });
-      }
-    });
-  </script>
-
+<script src="config.js"></script>
+<script src="supabase.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
