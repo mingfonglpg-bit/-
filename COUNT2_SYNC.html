@@ -78,7 +78,7 @@
     <p class="sub">資料來源：count1 相同 CSV（冷凍 / 冷藏常溫 / 冷藏牛）。點品名可開庫位系統搜尋；可手動對應儲位後一鍵跳轉。</p>
 
     <div class="hint">
-        🔗 連結規則：有對應儲位時 → 開啟 <b>android12</b> 並自動搜尋該儲位；無對應時 → 以品名搜尋。<br>
+        🔗 連結規則：有對應儲位時 → 開啟 <b>ANDROID68</b> 並自動搜尋該儲位；無對應時 → 以品名搜尋。<br>
         對應資料存在本機 localStorage（key: <code>count_slot_map</code>），可匯出／匯入 JSON。
     </div>
 
@@ -94,7 +94,7 @@
         <button class="btn" onclick="exportMap()">📥 匯出對應</button>
         <button class="btn" onclick="document.getElementById('importFile').click()">📤 匯入對應</button>
         <input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importMap(event)">
-        <a class="btn btn-main" href="https://mingfonglpg-bit.github.io/-1-1/android12.html" target="_blank">開庫位系統</a>
+        <a class="btn btn-main" href="https://mingfonglpg-bit.github.io/-/ANDROID68_SYNC_LOADING_FIX_v4.html" target="_blank">開庫位系統</a>
     </div>
 
     <div class="stats" id="stats">載入中…</div>
@@ -164,7 +164,7 @@
 </div>
 
 <script>
-const ANDROID12 = 'https://mingfonglpg-bit.github.io/-1-1/android12.html';
+const ANDROID12 = 'https://mingfonglpg-bit.github.io/-/ANDROID68_SYNC_LOADING_FIX_v4.html';
 const BASE = 'https://mingfonglpg-bit.github.io/-/';
 
 const CONFIG = {
