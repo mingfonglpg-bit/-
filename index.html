@@ -28,9 +28,65 @@
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <span class="cloud-badge off" id="cloudBadge">☁ 本機</span>
+      <button class="ghost" onclick="openCloudModal()">☁️ 雲端設定</button>
       <button class="ghost" onclick="mergeSyncWithCloud(false)">🔄 同步</button>
       <button class="ghost" onclick="doLogout()">🚪 登出</button>
     </div>
+    <!-- 在 header 的按鈕區塊中，加入「☁️ 雲端設定」按鈕 -->
+<header>
+  <div>
+    <h1>📦 智慧倉儲 · SKU + 圖譜 + 權限</h1>
+    <div style="font-size:12px;opacity:.9;margin-top:2px"><span id="userLabel"></span> <span id="roleBadge" class="role-badge"></span></div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <span class="cloud-badge off" id="cloudBadge">☁ 本機</span>
+    <button class="ghost" onclick="openCloudModal()">☁️ 雲端設定</button>
+    <button class="ghost" onclick="mergeSyncWithCloud(false)">🔄 同步</button>
+    <button class="ghost" onclick="doLogout()">🚪 登出</button>
+  </div>
+</header>
+
+<!-- 在 </div> (app 結尾) 下方新增設定與 SQL 的 Modal 視窗 -->
+<!-- Supabase 雲端設定 Modal -->
+<div id="cloudModal" class="modal-overlay">
+  <div class="modal">
+    <h2>☁️ Supabase 雲端同步設定</h2>
+    <div class="form-group full" style="margin-bottom:12px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="cfgCloudEnabled" style="width:auto">
+        <strong>啟用 Supabase 雲端資料庫同步</strong>
+      </label>
+    </div>
+    <div class="form-group full" style="margin-bottom:10px">
+      <label>Project URL</label>
+      <input type="text" id="cfgCloudUrl" placeholder="https://xyzcompany.supabase.co">
+    </div>
+    <div class="form-group full" style="margin-bottom:12px">
+      <label>Anon / Public API Key</label>
+      <input type="password" id="cfgCloudKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6...">
+    </div>
+    <div style="margin-bottom:14px">
+      <button class="outline" style="width:100%;font-size:12px;padding:6px" onclick="openSqlModal()">📄 檢視 / 複製 Supabase 建表 SQL 腳本</button>
+    </div>
+    <div class="modal-actions">
+      <button class="secondary" onclick="closeCloudModal()">取消</button>
+      <button onclick="saveCloudConfig()">💾 儲存並連線</button>
+    </div>
+  </div>
+</div>
+
+<!-- SQL 腳本檢視 Modal -->
+<div id="sqlModal" class="modal-overlay">
+  <div class="modal" style="max-width:640px">
+    <h2>📄 Supabase 建表 SQL 腳本</h2>
+    <p style="font-size:12px;color:#5f6368;margin-bottom:10px">請複製以下 SQL 腳本，至 Supabase 後台的 <strong>SQL Editor</strong> 貼上並執行即可建立資料表與權限：</p>
+    <div class="sql-box" id="sqlBox"></div>
+    <div class="modal-actions" style="margin-top:12px">
+      <button class="outline" onclick="copySqlScript()">📋 複製 SQL</button>
+      <button class="secondary" onclick="closeSqlModal()">關閉</button>
+    </div>
+  </div>
+</div>
   </header>
   
   <div class="toast-wrap" id="toastWrap"></div>
