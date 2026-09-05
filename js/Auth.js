@@ -5,6 +5,30 @@ export class Auth {
     this.KEYS = storageKeys;
     this.session = JSON.parse(localStorage.getItem(this.KEYS.session)) || null;
     this.users = JSON.parse(localStorage.getItem(this.KEYS.users)) || [];
+    
+    // 致命問題修復：若完全沒有使用者，自動產生預設管理員帳號
+    this.initDefaultUser();
+  }
+
+  /**
+   * 建立預設測試帳號 (admin / admin123)
+   */
+  async initDefaultUser() {
+    if (this.users.length === 0) {
+      // 預設建立一組 admin 帳號，密碼為 admin123
+      const { hash, salt } = await CryptoUtil.hashPassword('admin123');
+      const defaultAdmin = {
+        username: 'admin',
+        passwordHash: hash,
+        salt: salt,
+        role: 'admin',
+        name: '系統管理員',
+        mustChangePassword: false
+      };
+      this.users.push(defaultAdmin);
+      localStorage.setItem(this.KEYS.users, JSON.stringify(this.users));
+      console.log('已自動初始化預設管理員帳號：admin / admin123');
+    }
   }
 
   getCurrentUser() {
@@ -21,6 +45,9 @@ export class Auth {
   canWrite() { return this.isAdmin() || this.isOperator(); }
 
   async login(username, password) {
+    // 重新從 LocalStorage 讀取，確保拿到最新資料
+    this.users = JSON.parse(localStorage.getItem(this.KEYS.users)) || [];
+
     const user = this.users.find(u => u.username === username);
     if (!user) throw new Error('帳號或密碼錯誤');
 
