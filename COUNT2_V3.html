@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📦 COUNT · 品項數量 × 庫位對應</title>
+    <title>📦 庫存數量 × 庫位對應</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root {
@@ -94,7 +94,7 @@
         <button class="btn" onclick="exportMap()">📥 匯出對應</button>
         <button class="btn" onclick="document.getElementById('importFile').click()">📤 匯入對應</button>
         <input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importMap(event)">
-        <a class="btn btn-main" href="https://mingfonglpg-bit.github.io/-/ANDROID68_V3.1.html" target="_blank">開庫位系統</a>
+        <a class="btn btn-main" href="https://mingfonglpg-bit.github.io/-/ANDROID68_V3.4.3.html" target="_blank">開庫位系統</a>
     </div>
 
     <div class="stats" id="stats">載入中…</div>
@@ -164,7 +164,7 @@
 </div>
 
 <script>
-const ANDROID12 = 'https://mingfonglpg-bit.github.io/-/ANDROID68_V3.1.html';
+const ANDROID12 = 'https://mingfonglpg-bit.github.io/-/ANDROID68_V3.4.3.html';
 const BASE = 'https://mingfonglpg-bit.github.io/-/';
 
 const CONFIG = {
