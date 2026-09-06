@@ -443,6 +443,7 @@
             <button onclick="exportMainJSON()" class="btn-main" style="background:#475569;padding:8px 15px;">💾 主頁 JSON 匯出</button>
             <button onclick="document.getElementById('mainJsonImportInput').click()" class="btn-main" style="background:#475569;padding:8px 15px;">📂 JSON 匯入</button>
             <a href="https://mingfonglpg-bit.github.io/-/COUNT2_V3.html" target="_blank" class="btn-main" style="background:#1e1b4b; color:#c7d2fe; border: 1px solid #4338ca; text-align:center; justify-content:center;">📊 庫存綁定</a>
+            <button class="btn-main" style="background:#475569" onclick="syncBindingsFromGithub();closeModal('mobileFunctionsModal')">🔗 同步綁定</button>
             <input type="file" id="mainJsonImportInput" accept=".json,application/json" style="display:none" onchange="importMainJSON(event)">
             <a href="https://mingfonglpg-bit.github.io/-/upload.html" target="_blank" class="btn-main" style="background:var(--edit);padding:8px 15px;text-decoration:none;">📤 上傳工具</a>
         </div>
