@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚡ 倉儲庫位控管系統 V32.4 </title>
+    <title>⚡ 倉儲庫位控管系統 V36.4.4</title>
     <style>
         /* ============ 全域色彩／變數設定 ============
            統一定義主色、警告色、危險色、背景色等，之後所有樣式都透過
@@ -389,7 +389,7 @@
 </div>
 
 <div id="welcome-page" style="height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align: center; padding: 20px;">
-    <h1 style="letter-spacing: 4px; font-size: 2rem; margin-bottom: 30px;">倉儲庫位控管系統 <span style="color:#06b6d4">V32.4</span></h1>
+    <h1 style="letter-spacing: 4px; font-size: 2rem; margin-bottom: 30px;">倉儲庫位控管系統 <span style="color:#06b6d4">V36.4.4</span></h1>
     <button class="btn-main welcome-btn-v265" style="padding: 20px 80px; border-radius: 50px; font-size: 1rem;" onclick="enterSystem()">啟動系統</button>
 </div>
 
@@ -439,6 +439,7 @@
             <button onclick="executeBatchMove()" class="btn-main" style="background:var(--warning);padding:8px 15px;">📦 批次轉移</button>
             <button onclick="executeBatchDelete()" class="btn-main" style="background:var(--danger);padding:8px 15px;">🗑️ 批次刪除</button>
             <button onclick="openZoneAdminModal()" class="btn-main" style="background:#0ea5e9;padding:8px 15px;">🏷️ 主頁庫位管理</button>
+            <a href="https://mingfonglpg-bit.github.io/-/count1.html" target="_blank" class="btn-main" style="background:#1e1b4b; color:#c7d2fe; border: 1px solid #4338ca; text-align:center; justify-content:center;">📊 查詢庫存</a>
             <button onclick="openSearchLogModal()" class="btn-main" style="background:var(--primary);padding:8px 15px;margin-left:auto;">📋 查看搜尋日誌</button>
             <button onclick="exportMainJSON()" class="btn-main" style="background:#475569;padding:8px 15px;">💾 主頁 JSON 匯出</button>
             <button onclick="document.getElementById('mainJsonImportInput').click()" class="btn-main" style="background:#475569;padding:8px 15px;">📂 JSON 匯入</button>
