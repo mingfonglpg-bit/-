@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚡ 倉儲庫位控管系統 V32.3 </title>
+    <title>⚡ 倉儲庫位控管系統 V36.3 </title>
     <style>
         /* ============ 全域色彩／變數設定 ============
            統一定義主色、警告色、危險色、背景色等，之後所有樣式都透過
@@ -151,8 +151,10 @@
   .mobile-add-modal-content{width:94%;max-width:none;padding:20px;border-radius:22px}
   .add-modal-grid{grid-template-columns:1fr}
   .add-modal-wide{grid-column:auto}
-  td[data-label="數量"] .unit-editor{width:100%;justify-content:flex-end}
-  td[data-label="數量"] .unit-editor .unit-input{width:78px}
+  td[data-label="在庫庫存"] .stock-cell-editor{width:100%;}
+  td[data-label="在庫庫存"] .unit-editor{justify-content:flex-start}
+  td[data-label="在庫庫存"] .unit-editor .unit-input{width:72px}
+  td[data-label="在庫庫存"] .stock-main-input{width:105px}
 }
 
 
@@ -339,7 +341,7 @@
 </div>
 
 <div id="welcome-page" style="height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align: center; padding: 20px;">
-    <h1 style="letter-spacing: 4px; font-size: 2rem; margin-bottom: 30px;">倉儲庫位控管系統 <span style="color:#06b6d4">V32.3</span></h1>
+    <h1 style="letter-spacing: 4px; font-size: 2rem; margin-bottom: 30px;">倉儲庫位控管系統 <span style="color:#06b6d4">V36.3</span></h1>
     <button class="btn-main welcome-btn-v265" style="padding: 20px 80px; border-radius: 50px; font-size: 1rem;" onclick="enterSystem()">啟動系統</button>
 </div>
 
@@ -1120,10 +1122,11 @@ function getZoneDisplayName(z){return dynamicZones[z]?.name || z;}
         try {
             const payload = {
                 format: 'warehouse-main-backup',
-                version: 'V3.2',
+                version: 'V3.3',
                 exportedAt: new Date().toISOString(),
                 inventory: Array.isArray(inventory) ? inventory : [],
                 sharedInventoryStock: (typeof sharedInventoryStock === 'object' && sharedInventoryStock) ? sharedInventoryStock : {},
+                sharedUnitQuantities: (typeof sharedUnitQuantities === 'object' && sharedUnitQuantities) ? sharedUnitQuantities : {},
                 countQtyOverrides: (typeof countQtyOverrides === 'object' && countQtyOverrides) ? countQtyOverrides : {},
                 countBindings: (typeof countBindings === 'object' && countBindings) ? countBindings : {},
                 sharedCountSlotMap: (typeof sharedCountSlotMap === 'object' && sharedCountSlotMap) ? sharedCountSlotMap : {},
@@ -1154,6 +1157,7 @@ function getZoneDisplayName(z){return dynamicZones[z]?.name || z;}
             if (!confirm('確定要匯入主頁 JSON 備份嗎？\n\n匯入會更新本機主頁資料與綁定設定；如需同步到雲端，請確認資料後再使用系統的同步功能。')) return;
             if (Array.isArray(data.inventory)) inventory = data.inventory;
             if (data.sharedInventoryStock && typeof data.sharedInventoryStock === 'object') sharedInventoryStock = data.sharedInventoryStock;
+            if (data.sharedUnitQuantities && typeof data.sharedUnitQuantities === 'object') sharedUnitQuantities = data.sharedUnitQuantities;
             if (data.countQtyOverrides && typeof data.countQtyOverrides === 'object') countQtyOverrides = data.countQtyOverrides;
             if (data.countBindings && typeof data.countBindings === 'object') countBindings = data.countBindings;
             if (data.sharedCountSlotMap && typeof data.sharedCountSlotMap === 'object') sharedCountSlotMap = data.sharedCountSlotMap;
@@ -1594,7 +1598,7 @@ function renderVisual() {
             <tr class="mobile-card-row" data-id="${i.id}">
                 <td class="td-select-cell" style="${isAdmin ? '' : 'display:none;'} text-align:center;"><input type="checkbox" class="row-select-box" value="${i.id}"></td>
                 <td data-label="儲位位置"><b style="color:${customSlotColors[getSlotColorKey(i.zone, i.floor, i.pos)] || getZoneColor(i.zone)}">${i.floor}-${i.pos}</b><small style="color:${customSlotColors[getSlotColorKey(i.zone, i.floor, i.pos)] || getZoneColor(i.zone)}; opacity: 0.85; font-weight: bold; margin-left: 5px;">${i.zone}</small></td>
-                <td data-label="產品內容"><b class="android-product-name" style="cursor:${isAdmin?'pointer':'default'};text-decoration:${isAdmin?'underline dotted':'none'};text-underline-offset:3px;" title="${isAdmin?'點擊綁定 COUNT2 品項名稱':''}" onclick="${isAdmin?`openCountBindingModal(${JSON.stringify(i).replace(/"/g,'&quot;')})`:''}">${i.name}</b>${boundCountKey(i) ? `<span class="report-label" style="background:rgba(34,211,238,.12);color:var(--primary);">🔗 已綁 COUNT2</span>` : ''}${i.note ? `<span class="report-label">⚠️ ${i.note}</span>` : ''}</td><td data-label="數量">${unitEditorHTML(i)}${boundCountKey(i) ? `<small style="display:block;color:var(--primary);margin-top:4px;">COUNT2 參考：${getCountQty(i)}</small>` : `<small style="display:block;color:var(--text-dim);margin-top:4px;">單位數量</small>`}</td><td data-label="在庫庫存"><input data-stock-id="${escapeHtml(i.id)}" type="number" min="0" step="0.01" value="${escapeHtml(getInventoryStock(i))}" placeholder="未設定" style="width:105px;padding:7px 8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" onchange="saveInventoryStock(inventory.find(x=>String(x.id)===String(this.dataset.stockId)),this.value)"><small style="display:block;color:var(--text-dim);font-size:10px;">所有使用者可修改</small></td>
+                <td data-label="產品內容"><b class="android-product-name" style="cursor:${isAdmin?'pointer':'default'};text-decoration:${isAdmin?'underline dotted':'none'};text-underline-offset:3px;" title="${isAdmin?'點擊綁定 COUNT2 品項名稱':''}" onclick="${isAdmin?`openCountBindingModal(${JSON.stringify(i).replace(/"/g,'&quot;')})`:''}">${i.name}</b>${boundCountKey(i) ? `<span class="report-label" style="background:rgba(34,211,238,.12);color:var(--primary);">🔗 已綁 COUNT2</span>` : ''}${i.note ? `<span class="report-label">⚠️ ${i.note}</span>` : ''}</td><td data-label="數量">${boundCountKey(i) ? `<b style="font-size:16px;">${getCountQty(i)}</b><small style="display:block;color:var(--primary);margin-top:4px;">COUNT2 參考數量</small>` : `<span style="color:var(--text-dim);">-</span>`}</td><td data-label="在庫庫存"><div class="stock-cell-editor"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><input class="stock-main-input" data-stock-id="${escapeHtml(i.id)}" type="number" min="0" step="0.01" value="${escapeHtml(getInventoryStock(i))}" placeholder="未設定" style="padding:7px 8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" onchange="saveInventoryStock(inventory.find(x=>String(x.id)===String(this.dataset.stockId)),this.value)"><span style="font-size:11px;color:var(--text-dim);">在庫</span>${unitEditorHTML(i)}</div><small style="display:block;color:var(--text-dim);font-size:10px;margin-top:4px;">所有使用者可修改｜箱＋第二單位</small></div></td>
                 <td data-label="有效日期">${i.date ? i.date.split('T')[0] : '-'}</td>
                 <td data-label="批號碼"><code>${i.batch || '-'}</code></td>
                <td data-label="備註狀態"><small style="max-width: 100% !important; white-space: normal !important; display: inline-block; word-break: break-all;">${i.note ? i.note : '正常'}</small></td>
