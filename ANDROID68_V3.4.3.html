@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚡ 倉儲庫位控管系統 V32.4 </title>
+    <title>⚡ 倉儲庫位控管系統 V36.4 </title>
     <style>
         /* ============ 全域色彩／變數設定 ============
            統一定義主色、警告色、危險色、背景色等，之後所有樣式都透過
@@ -389,7 +389,7 @@
 </div>
 
 <div id="welcome-page" style="height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align: center; padding: 20px;">
-    <h1 style="letter-spacing: 4px; font-size: 2rem; margin-bottom: 30px;">倉儲庫位控管系統 <span style="color:#06b6d4">V32.4</span></h1>
+    <h1 style="letter-spacing: 4px; font-size: 2rem; margin-bottom: 30px;">倉儲庫位控管系統 <span style="color:#06b6d4">V36.4</span></h1>
     <button class="btn-main welcome-btn-v265" style="padding: 20px 80px; border-radius: 50px; font-size: 1rem;" onclick="enterSystem()">啟動系統</button>
 </div>
 
@@ -411,6 +411,7 @@
         <h2 style="margin:0;">📦 庫位狀態</h2>
         <div class="header-actions" style="display:flex; gap:10px; align-items:center;">
             <a href="https://mingfonglpg-bit.github.io/-/count1.html" target="_blank" class="btn-main" style="background:#1e1b4b; color:#c7d2fe; border: 1px solid #4338ca; text-align:center; justify-content:center;">📊 查詢庫存</a>
+            <a href="https://mingfonglpg-bit.github.io/-/COUNT2_V3.html" target="_blank" class="btn-main" style="background:#1e1b4b; color:#c7d2fe; border: 1px solid #4338ca; text-align:center; justify-content:center;">📊 庫存綁定</a>
             <button id="netStatusBtn" onclick="toggleNetworkMode()" class="btn-main status-online" style="justify-content:center;">🌐 線上模式</button>
             <div id="usageInfo" class="usage-badge" style="text-align:center; justify-content:center;">使用率: --%</div>
             <button onclick="fetchData()" class="btn-main" style="background:#334155; justify-content:center;">🔄 刷新</button>
