@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>凍庫資料轉換工具</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --ink: #eaf2f4;
+    --ink-dim: #a9c2c9;
+    --base: #0d1b22;
+    --base-raised: #12242c;
+    --line: #234049;
+    --frost: #7fd8e8;
+    --frost-dim: #3f6b74;
+    --amber: #f2a65a;
+    --red: #f2735a;
+    --green: #7fd8a8;
+    --mono: 'IBM Plex Mono', 'Noto Sans TC', monospace;
+    --sans: 'Noto Sans TC', 'Inter', -apple-system, sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0;
+    background: var(--base);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height:1.6;
+  }
+  body{
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(127,216,232,0.07), transparent 40%),
+      radial-gradient(circle at 85% 100%, rgba(127,216,232,0.05), transparent 45%);
+    min-height:100vh;
+  }
+  .wrap{
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 56px 24px 120px;
+  }
+  header.page{ margin-bottom: 40px; }
+  .kicker{
+    color: var(--frost);
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    margin: 0 0 10px;
+  }
+  h1{ font-size: 30px; font-weight: 700; margin: 0 0 12px; letter-spacing: -0.01em; }
+  .lede{ color: var(--ink-dim); font-size: 15px; max-width: 62ch; margin: 0; }
+
+  .conn-strip{
+    display:flex; align-items:center; gap:10px;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--ink-dim);
+    background: var(--base-raised);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 20px;
+  }
+  .conn-strip .dot{ width:7px; height:7px; border-radius:50%; background: var(--green); flex-shrink:0; }
+
+  .flow{ position: relative; }
+  .flow::before{
+    content:"";
+    position:absolute; left: 19px; top: 14px; bottom: 14px; width: 1px;
+    background: linear-gradient(var(--line), var(--line) 90%, transparent);
+  }
+  .step{ position: relative; padding: 0 0 44px 64px; }
+  .step:last-child{ padding-bottom: 0; }
+  .step-num{
+    position: absolute; left: 0; top: 0; width: 40px; height: 40px; border-radius: 50%;
+    background: var(--base-raised); border: 1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--mono); font-size: 15px; color: var(--frost); z-index:1;
+  }
+  .step.done .step-num{ background: var(--frost); color: var(--base); border-color: var(--frost); }
+  .step-title{ font-size: 18px; font-weight: 600; margin: 6px 0 6px; }
+  .step-desc{ color: var(--ink-dim); font-size: 14px; margin: 0 0 18px; }
+
+  .dropzone{
+    border: 1px dashed var(--frost-dim); border-radius: 10px; padding: 28px 20px;
+    text-align: center; cursor: pointer; transition: border-color .15s ease, background .15s ease;
+    background: var(--base-raised);
+  }
+  .dropzone:hover, .dropzone.drag{ border-color: var(--frost); background: #14282f; }
+  .dropzone input{ display:none; }
+  .dz-title{ font-size: 14px; margin-bottom: 4px; }
+  .dz-sub{ font-size: 12px; color: var(--ink-dim); font-family: var(--mono); }
+  .file-chip{
+    display:inline-flex; align-items:center; gap:8px; font-family: var(--mono); font-size: 13px;
+    background: var(--base-raised); border: 1px solid var(--line); border-radius: 6px;
+    padding: 8px 12px; margin-top: 4px;
+  }
+  .file-chip .dot{ width:6px; height:6px; border-radius:50%; background: var(--green); }
+
+  table{ width: 100%; border-collapse: collapse; font-size: 13px; font-family: var(--mono); }
+  .table-scroll{ max-height: 340px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+  th, td{ text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th{ position: sticky; top:0; background: var(--base-raised); color: var(--frost); font-weight: 500; font-size: 11px; }
+  tbody tr:hover{ background: rgba(127,216,232,0.05); }
+  .stat-row{ display:flex; gap: 22px; margin: 14px 0 16px; font-family: var(--mono); font-size: 13px; flex-wrap: wrap; }
+  .stat b{ color: var(--frost); font-weight: 600; }
+  .warn-box{
+    border-left: 2px solid var(--amber); background: rgba(242,166,90,0.08);
+    padding: 10px 14px; font-size: 13px; border-radius: 0 6px 6px 0; color: #f4cfa1; margin-top: 12px;
+  }
+  .danger-box{
+    border-left: 2px solid var(--red); background: rgba(242,115,90,0.08);
+    padding: 10px 14px; font-size: 13px; border-radius: 0 6px 6px 0; color: #f7b3a3; margin-top: 12px;
+  }
+  .ok-box{
+    border-left: 2px solid var(--green); background: rgba(127,216,168,0.08);
+    padding: 10px 14px; font-size: 13px; border-radius: 0 6px 6px 0; color: #bdeed2; margin-top: 12px;
+  }
+
+  .zone-grid{ display: flex; flex-direction: column; gap: 8px; }
+  .zone-row{ display:flex; align-items:center; gap: 12px; padding: 8px 12px; background: var(--base-raised); border: 1px solid var(--line); border-radius: 8px; }
+  .zone-name{ font-family: var(--mono); font-size: 13px; flex: 1; }
+  .zone-count{ font-size: 12px; color: var(--ink-dim); font-family: var(--mono); }
+  .zone-row input[type=color]{ width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 6px; background: none; padding: 0; cursor: pointer; }
+  .zone-row button.clear{ background: none; border: 1px solid var(--line); color: var(--ink-dim); border-radius: 6px; font-size: 11px; padding: 4px 8px; cursor: pointer; font-family: var(--sans); }
+  .zone-row button.clear:hover{ color: var(--ink); border-color: var(--frost-dim); }
+
+  .login-box{
+    background: var(--base-raised); border: 1px solid var(--line); border-radius: 10px;
+    padding: 18px; max-width: 360px;
+  }
+  .login-box label{ display:block; font-size: 12px; color: var(--ink-dim); margin: 10px 0 4px; }
+  .login-box label:first-child{ margin-top: 0; }
+  .login-box input{
+    width: 100%; padding: 9px 10px; background: var(--base); border: 1px solid var(--line);
+    border-radius: 6px; color: var(--ink); font-family: var(--sans); font-size: 14px;
+  }
+  .login-box input:focus-visible{ outline: 2px solid var(--frost); outline-offset: 1px; }
+  .session-chip{
+    display:flex; align-items:center; gap:10px; font-family: var(--mono); font-size: 13px;
+    background: var(--base-raised); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px;
+  }
+  .session-chip .dot{ width:7px; height:7px; border-radius:50%; background: var(--green); }
+
+  .action-row{ display:flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+  button.primary{
+    background: var(--frost); color: var(--base); border: none; padding: 12px 22px;
+    font-size: 14px; font-weight: 600; border-radius: 8px; cursor: pointer; font-family: var(--sans);
+  }
+  button.primary:hover{ background: #9ce3ef; }
+  button.primary:disabled{ background: var(--line); color: var(--ink-dim); cursor: not-allowed; }
+  button.danger{ background: var(--red); color: #2a0e08; }
+  button.danger:hover{ background: #f79280; }
+  button.secondary{
+    background: none; color: var(--ink); border: 1px solid var(--line); padding: 12px 22px;
+    font-size: 14px; font-weight: 600; border-radius: 8px; cursor: pointer; font-family: var(--sans);
+  }
+  button.secondary:hover{ border-color: var(--frost-dim); }
+  button.secondary:disabled{ color: var(--ink-dim); cursor: not-allowed; }
+  button:focus-visible, .dropzone:focus-visible{ outline: 2px solid var(--frost); outline-offset: 2px; }
+  .hint{ font-size: 12px; color: var(--ink-dim); margin-top: 10px; }
+  .hidden{ display:none !important; }
+  .progress{
+    font-family: var(--mono); font-size: 12px; color: var(--frost); margin-top: 10px;
+  }
+  @media (max-width: 560px){
+    .wrap{ padding: 36px 16px 100px; }
+    .flow::before{ left: 15px; }
+    .step{ padding-left: 50px; }
+    .step-num{ width:32px; height:32px; font-size:13px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page">
+    <p class="kicker">擴充凍庫 → Supabase</p>
+    <h1>凍庫資料轉換工具</h1>
+    <p class="lede">上傳「擴充凍庫」的 Excel 檔,登入管理員帳號後,直接覆寫寫入 Supabase 資料庫,或下載成 CSV 備用。轉檔在你的瀏覽器裡完成,不會上傳到第三方伺服器。</p>
+    <div class="conn-strip"><span class="dot"></span>已連線至 zkxsdcmgbtfpleynuyjb.supabase.co · 資料表 freezer_inventory</div>
+  </header>
+
+  <div class="flow">
+
+    <div class="step" id="step1">
+      <div class="step-num">1</div>
+      <div class="step-title">上傳擴充凍庫.xlsx</div>
+      <p class="step-desc">選擇檔案,或直接拖曳到下方區域。</p>
+
+      <div class="dropzone" id="dropzone" tabindex="0">
+        <input type="file" id="fileInput" accept=".xlsx,.xls">
+        <div class="dz-title">點擊選擇檔案,或拖放到這裡</div>
+        <div class="dz-sub">.xlsx / .xls</div>
+      </div>
+      <div id="fileInfo"></div>
+    </div>
+
+    <div class="step" id="step2">
+      <div class="step-num">2</div>
+      <div class="step-title">對照與預覽</div>
+      <p class="step-desc">確認欄位對應與轉換後的資料是否正確。</p>
+      <div id="previewArea"><div class="dz-sub" style="color:var(--ink-dim)">尚未上傳檔案</div></div>
+    </div>
+
+    <div class="step" id="step3">
+      <div class="step-num">3</div>
+      <div class="step-title">分區顏色(選填)</div>
+      <p class="step-desc">對應 Supabase 資料表裡的 color 欄位,留空則不設定。</p>
+      <div class="zone-grid" id="zoneGrid"></div>
+    </div>
+
+    <div class="step" id="step4">
+      <div class="step-num">4</div>
+      <div class="step-title">管理員登入</div>
+      <p class="step-desc">只有 <strong>ejin24@gmail.com</strong> 這個帳號能寫入資料庫(由 Supabase 的 RLS 權限規則限制,不是這個網頁決定的)。</p>
+
+      <div id="loginArea">
+        <div class="login-box">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" value="ejin24@gmail.com" autocomplete="username">
+          <label for="loginPassword">密碼</label>
+          <input type="password" id="loginPassword" autocomplete="current-password">
+          <div class="action-row">
+            <button class="primary" id="loginBtn">登入</button>
+          </div>
+          <div id="loginMsg"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step" id="step5">
+      <div class="step-num">5</div>
+      <div class="step-title">寫入資料庫 / 下載 CSV</div>
+      <p class="step-desc">「覆寫並上傳」會先清空 freezer_inventory 整張表,再寫入這次轉換的全部資料,無法復原,請先確認上方預覽無誤。</p>
+
+      <div class="action-row">
+        <button class="danger" id="overwriteBtn" disabled>覆寫並上傳到 Supabase</button>
+        <button class="secondary" id="downloadBtn" disabled>下載 CSV</button>
+      </div>
+      <p class="hint" id="actionHint">請先完成步驟 1 與步驟 4。</p>
+      <div id="uploadStatus"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://zkxsdcmgbtfpleynuyjb.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpreHNkY21nYnRmcGxleW51eWpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NjY1MDEsImV4cCI6MjEwMzE0MjUwMX0.r4rtK2ipC1ygHw_YFwtMhyIHqDX7vwSJJZAlH0B_rls";
+const TABLE_NAME = "freezer_inventory";
+const ADMIN_EMAIL = "ejin24@gmail.com";
+const BATCH_SIZE = 400;
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const TARGET_HEADERS = ["id","zone","floor","pos","name","batch","date","note","status","Note*","color","logs","customFields","statusText","aging","agingDate","createdAt"];
+const HEADER_ALIAS = {
+  "id": "id", "zone": "zone", "floor": "floor", "pos": "pos",
+  "name": "name", "batch": "batch", "date": "date", "note": "note",
+  "status": "status", "note*": "Note*"
+};
+// maps our internal (CSV-style) field name -> actual Postgres column name
+const DB_COLUMN_MAP = {
+  id: "id", zone: "zone", floor: "floor", pos: "pos", name: "name", batch: "batch",
+  date: "date", note: "note", status: "status", "Note*": "note_star",
+  color: "color", logs: "logs", customFields: "custom_fields",
+  statusText: "status_text", aging: "aging", agingDate: "aging_date"
+  // createdAt intentionally omitted: DB default now() fills it on insert
+};
+
+let parsedRows = [];
+let zoneColors = {};
+let currentSession = null;
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const fileInfo = document.getElementById('fileInfo');
+const previewArea = document.getElementById('previewArea');
+const zoneGrid = document.getElementById('zoneGrid');
+const downloadBtn = document.getElementById('downloadBtn');
+const overwriteBtn = document.getElementById('overwriteBtn');
+const actionHint = document.getElementById('actionHint');
+const uploadStatus = document.getElementById('uploadStatus');
+const step2 = document.getElementById('step2');
+const step3 = document.getElementById('step3');
+const step4 = document.getElementById('step4');
+const step5 = document.getElementById('step5');
+const loginArea = document.getElementById('loginArea');
+const loginMsg = document.getElementById('loginMsg');
+
+/* ---------- file upload ---------- */
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+['dragover','dragenter'].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('drag'); }));
+['dragleave','drop'].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('drag'); }));
+dropzone.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) handleFile(f); });
+fileInput.addEventListener('change', e => { const f = e.target.files[0]; if (f) handleFile(f); });
+
+function handleFile(file){
+  fileInfo.innerHTML = `<div class="file-chip"><span class="dot"></span>${escapeHtml(file.name)} · 讀取中…</div>`;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type:'array', cellDates:true });
+      const sheetName = wb.SheetNames[0];
+      const sheet = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: true });
+      convertRows(rows);
+      fileInfo.innerHTML = `<div class="file-chip"><span class="dot"></span>${escapeHtml(file.name)} · 已讀取工作表「${escapeHtml(sheetName)}」</div>`;
+      document.getElementById('step1').classList.add('done');
+    }catch(err){
+      fileInfo.innerHTML = `<div class="warn-box">讀取失敗:${escapeHtml(err.message || String(err))}。請確認檔案格式是否為 .xlsx。</div>`;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function toDateStr(v){
+  if (v === null || v === undefined || v === "") return "";
+  let d = null;
+  if (v instanceof Date) d = v;
+  else if (typeof v === 'string') { const t = v.trim(); if (!t) return ""; const parsed = new Date(t); if (!isNaN(parsed)) d = parsed; }
+  if (!d || isNaN(d)) return typeof v === 'string' ? v.trim() : "";
+  const yyyy = d.getFullYear(), mm = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+function toIntStr(v){
+  if (v === null || v === undefined || v === "") return "";
+  const n = Number(v);
+  if (!isNaN(n) && isFinite(n)) return String(Math.trunc(n));
+  return String(v).trim();
+}
+function toIdStr(v){
+  if (v === null || v === undefined || v === "") return "";
+  if (typeof v === 'number') return String(Math.trunc(v));
+  return String(v).trim();
+}
+
+function convertRows(rawRows){
+  const sample = rawRows.find(r => Object.keys(r).length) || {};
+  const sourceKeys = Object.keys(sample);
+  const keyMap = {};
+  sourceKeys.forEach(k => { const alias = HEADER_ALIAS[k.trim().toLowerCase()]; if (alias) keyMap[alias] = k; });
+
+  parsedRows = [];
+  let skipped = 0;
+  rawRows.forEach(r => {
+    const idVal = keyMap.id ? r[keyMap.id] : "";
+    const zoneVal = keyMap.zone ? r[keyMap.zone] : "";
+    const nameVal = keyMap.name ? r[keyMap.name] : "";
+    if ((idVal === "" || idVal === undefined) && (zoneVal === "" || zoneVal === undefined) && (nameVal === "" || nameVal === undefined)){
+      skipped++; return;
+    }
+    parsedRows.push({
+      id: toIdStr(idVal),
+      zone: (zoneVal ?? "").toString().trim(),
+      floor: keyMap.floor ? (r[keyMap.floor] ?? "").toString().trim() : "",
+      pos: toIntStr(keyMap.pos ? r[keyMap.pos] : ""),
+      name: (nameVal ?? "").toString().trim(),
+      batch: keyMap.batch ? (r[keyMap.batch] ?? "").toString().trim() : "",
+      date: toDateStr(keyMap.date ? r[keyMap.date] : ""),
+      note: keyMap.note ? (r[keyMap.note] ?? "").toString().trim() : "",
+      status: keyMap.status ? (r[keyMap.status] ?? "").toString().trim() : "",
+      "Note*": keyMap["Note*"] ? (r[keyMap["Note*"]] ?? "").toString().trim() : "",
+      color: "", logs: "", customFields: "", statusText: "", aging: "", agingDate: "", createdAt: ""
+    });
+  });
+
+  renderPreview(skipped, keyMap);
+  renderZones();
+  refreshActionState();
+}
+
+function renderPreview(skipped, keyMap){
+  let html = `<div class="stat-row">
+    <span class="stat">共 <b>${parsedRows.length}</b> 筆資料</span>
+    ${skipped ? `<span class="stat">已略過 <b>${skipped}</b> 筆空白列</span>` : ""}
+  </div>`;
+  if (Object.keys(keyMap).length < 5){
+    html += `<div class="warn-box">偵測到的欄位對應較少,請確認來源檔案第一列是否為標準欄位名稱(ID / Zone / Floor / Pos / Name / Batch / Date / Note / Status / Note*)。</div>`;
+  }
+  html += `<div class="table-scroll" style="margin-top:12px"><table><thead><tr>` +
+    TARGET_HEADERS.map(h => `<th>${escapeHtml(h)}</th>`).join('') + `</tr></thead><tbody>`;
+  parsedRows.slice(0, 15).forEach(row => {
+    html += '<tr>' + TARGET_HEADERS.map(h => `<td>${escapeHtml(row[h] ?? "")}</td>`).join('') + '</tr>';
+  });
+  html += `</tbody></table></div>`;
+  if (parsedRows.length > 15) html += `<p class="hint">僅預覽前 15 筆,實際寫入 / 下載會包含全部 ${parsedRows.length} 筆。</p>`;
+  previewArea.innerHTML = html;
+  step2.classList.add('done');
+}
+
+function renderZones(){
+  const counts = {};
+  parsedRows.forEach(r => { if (r.zone){ counts[r.zone] = (counts[r.zone] || 0) + 1; } });
+  const zones = Object.keys(counts).sort((a,b) => counts[b]-counts[a]);
+  if (!zones.length){ zoneGrid.innerHTML = `<div class="dz-sub" style="color:var(--ink-dim)">沒有偵測到分區資料</div>`; return; }
+  zoneGrid.innerHTML = zones.map(z => {
+    const color = zoneColors[z] || "";
+    return `<div class="zone-row" data-zone="${escapeHtml(z)}">
+      <span class="zone-name">${escapeHtml(z)}</span>
+      <span class="zone-count">${counts[z]} 筆</span>
+      <input type="color" value="${color || '#5eead4'}" data-zone="${escapeHtml(z)}">
+      <button class="clear" data-zone="${escapeHtml(z)}" type="button">清除</button>
+    </div>`;
+  }).join('');
+  zoneGrid.querySelectorAll('input[type=color]').forEach(inp => {
+    inp.addEventListener('input', e => { zoneColors[e.target.dataset.zone] = e.target.value; applyZoneColors(); });
+  });
+  zoneGrid.querySelectorAll('button.clear').forEach(btn => {
+    btn.addEventListener('click', e => { delete zoneColors[e.target.dataset.zone]; applyZoneColors(); renderZones(); });
+  });
+  step3.classList.add('done');
+}
+function applyZoneColors(){ parsedRows.forEach(r => { if (zoneColors[r.zone]) r.color = zoneColors[r.zone]; }); }
+
+/* ---------- auth ---------- */
+
+async function refreshSessionUI(){
+  const { data } = await sb.auth.getSession();
+  currentSession = data.session || null;
+  if (currentSession){
+    const email = currentSession.user.email;
+    const isAdmin = email === ADMIN_EMAIL;
+    loginArea.innerHTML = `<div class="session-chip"><span class="dot" style="background:${isAdmin ? 'var(--green)' : 'var(--amber)'}"></span>
+      已登入:${escapeHtml(email)} ${isAdmin ? '' : '(非管理員,寫入會被資料庫拒絕)'}
+      <button class="secondary" id="logoutBtn" style="padding:6px 12px;font-size:12px;margin-left:8px">登出</button></div>`;
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await sb.auth.signOut(); await refreshSessionUI();
+    });
+    step4.classList.add('done');
+  } else {
+    loginArea.innerHTML = `<div class="login-box">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" value="${escapeHtml(ADMIN_EMAIL)}" autocomplete="username">
+        <label for="loginPassword">密碼</label>
+        <input type="password" id="loginPassword" autocomplete="current-password">
+        <div class="action-row"><button class="primary" id="loginBtn">登入</button></div>
+        <div id="loginMsg"></div>
+      </div>`;
+    document.getElementById('loginBtn').addEventListener('click', doLogin);
+    step4.classList.remove('done');
+  }
+  refreshActionState();
+}
+
+async function doLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const msgEl = document.getElementById('loginMsg');
+  msgEl.innerHTML = `<p class="hint">登入中…</p>`;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error){ msgEl.innerHTML = `<div class="warn-box">登入失敗:${escapeHtml(error.message)}</div>`; return; }
+  await refreshSessionUI();
+}
+
+sb.auth.onAuthStateChange(() => { refreshSessionUI(); });
+refreshSessionUI();
+
+/* ---------- write / download ---------- */
+
+function refreshActionState(){
+  const hasData = parsedRows.length > 0;
+  const isAdmin = currentSession && currentSession.user.email === ADMIN_EMAIL;
+  downloadBtn.disabled = !hasData;
+  overwriteBtn.disabled = !(hasData && isAdmin);
+  if (!hasData) actionHint.textContent = '請先完成步驟 1。';
+  else if (!currentSession) actionHint.textContent = '請先完成步驟 4 的登入,才能寫入 Supabase(下載 CSV 不需要登入)。';
+  else if (!isAdmin) actionHint.textContent = '目前登入的帳號不是管理員,無法寫入 Supabase。';
+  else actionHint.textContent = `準備就緒,共 ${parsedRows.length} 筆資料。`;
+}
+
+function csvEscape(val){
+  const s = (val ?? "").toString();
+  if (/[",\r\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+function buildCsv(){
+  applyZoneColors();
+  const lines = [TARGET_HEADERS.map(csvEscape).join(',')];
+  parsedRows.forEach(row => lines.push(TARGET_HEADERS.map(h => csvEscape(row[h])).join(',')));
+  return lines.join('\r\n') + '\r\n';
+}
+downloadBtn.addEventListener('click', () => {
+  const csv = buildCsv();
+  const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = '擴充凍庫_converted.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  step5.classList.add('done');
+});
+
+function toDbRow(row){
+  const out = {};
+  for (const [srcKey, dbKey] of Object.entries(DB_COLUMN_MAP)){
+    let v = row[srcKey];
+    if (v === "" || v === undefined) v = null;
+    if (dbKey === 'pos' && v !== null) v = parseInt(v, 10);
+    out[dbKey] = v;
+  }
+  return out;
+}
+
+overwriteBtn.addEventListener('click', async () => {
+  if (!parsedRows.length) return;
+  const ok = window.confirm(`即將清空 ${TABLE_NAME} 資料表,並寫入這次轉換的 ${parsedRows.length} 筆資料。此動作無法復原,確定要繼續嗎?`);
+  if (!ok) return;
+
+  applyZoneColors();
+  overwriteBtn.disabled = true;
+  downloadBtn.disabled = true;
+  uploadStatus.innerHTML = `<p class="progress">正在清空資料表…</p>`;
+
+  try{
+    const { error: delError } = await sb.from(TABLE_NAME).delete().not('id', 'is', null);
+    if (delError) throw new Error('清空資料表失敗:' + delError.message);
+
+    const dbRows = parsedRows.map(toDbRow);
+    let written = 0;
+    for (let i = 0; i < dbRows.length; i += BATCH_SIZE){
+      const chunk = dbRows.slice(i, i + BATCH_SIZE);
+      const { error: insError } = await sb.from(TABLE_NAME).insert(chunk);
+      if (insError) throw new Error(`寫入第 ${i+1}–${i+chunk.length} 筆時失敗:` + insError.message);
+      written += chunk.length;
+      uploadStatus.innerHTML = `<p class="progress">已寫入 ${written} / ${dbRows.length} 筆…</p>`;
+    }
+    uploadStatus.innerHTML = `<div class="ok-box">完成!已清空並寫入 ${written} 筆資料到 ${TABLE_NAME}。</div>`;
+    step5.classList.add('done');
+  }catch(err){
+    uploadStatus.innerHTML = `<div class="danger-box">${escapeHtml(err.message || String(err))}</div>`;
+  }finally{
+    refreshActionState();
+  }
+});
+
+function escapeHtml(s){
+  return (s ?? "").toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
